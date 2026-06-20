@@ -1,0 +1,400 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}출석 예정 - 청림유도관{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-person-check-fill"></i> 출석 예정</h4>
+    <a href="{% url 'schedule:attendance_week' %}" class="btn btn-sm btn-outline-secondary">오늘</a>
+</div>
+
+<!-- 주 네비게이션 -->
+<div class="d-flex align-items-center justify-content-center gap-3 mb-4">
+    <a href="{% url 'schedule:attendance_week_nav' prev_year prev_iso_week %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-chevron-left"></i>
+    </a>
+    <span class="fw-semibold">{{ monday|date:"Y년 n월 j일" }} ~ {{ next_sunday|date:"n월 j일" }}</span>
+    <a href="{% url 'schedule:attendance_week_nav' next_year next_iso_week %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-chevron-right"></i>
+    </a>
+</div>
+
+<!-- 공지사항 -->
+{% if announcements %}
+<div class="mb-3">
+    {% for ann in announcements %}
+    <a href="{% url 'schedule:announcement_detail' ann.pk %}" class="text-decoration-none">
+        <div class="alert alert-warning py-2 px-3 mb-1 d-flex align-items-center gap-2" style="font-size:.85rem;">
+            {% if ann.is_pinned %}<i class="bi bi-pin-fill"></i>{% else %}<i class="bi bi-megaphone-fill"></i>{% endif %}
+            <span class="text-dark">{{ ann.title }}</span>
+            <small class="text-muted ms-auto">{{ ann.created_at|date:"n/j" }}</small>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 오늘 출석 현황 -->
+{% if today_slots %}
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning bg-opacity-10 fw-semibold py-2">
+        <i class="bi bi-people-fill text-warning"></i> 오늘 나오는 사람
+    </div>
+    <div class="card-body py-2 px-3">
+        {% for slot in today_slots %}
+        <div class="d-flex align-items-center gap-2 mb-1" style="font-size:.85rem;">
+            <span class="text-muted fw-semibold" style="min-width:90px;">{{ slot.label }}</span>
+            <span class="text-muted small">{{ slot.count }}명</span>
+            {% for name in slot.attendees %}
+            <span class="badge bg-primary-subtle text-primary">{{ name }}</span>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- 안내 문구 -->
+<p class="text-muted small text-center mb-3">날짜를 탭하면 참석할 시간대를 선택할 수 있어요.</p>
+
+<!-- ══ 이번 주 ══ -->
+<div class="d-flex align-items-center gap-2 mb-2">
+    <span class="badge bg-secondary" style="font-size:.85rem;">이번 주</span>
+    <small class="text-muted">{{ monday|date:"n월 j일" }} ~ {{ sunday|date:"n월 j일" }}</small>
+</div>
+
+<!-- 데스크탑: 7칸 그리드 -->
+<div class="row g-2 d-none d-md-flex mb-4">
+    {% for day in this_week %}
+    <div class="col">
+        <div class="card h-100 {% if day.is_today %}border-warning border-2{% elif day.is_weekend %}bg-light{% endif %}
+                    {% if not day.is_past %}day-card{% endif %}"
+             {% if not day.is_past %}
+             data-date="{{ day.date|date:'Y-m-d' }}"
+             data-label="{{ day.date|date:'n월 j일' }} ({{ day.day_name }})"
+             data-slots="{{ day.slots_json|escape }}"
+             style="cursor:pointer;"
+             {% endif %}>
+            <div class="card-header text-center py-2
+                {% if day.is_today %}bg-warning text-dark{% elif day.is_weekend %}bg-light text-muted{% else %}bg-white{% endif %}">
+                <div class="fw-bold">{{ day.day_name }}</div>
+                <div class="{% if day.is_today %}fw-bold{% else %}text-muted{% endif %}" style="font-size:1.3rem;">{{ day.date|date:"j" }}</div>
+                {% if day.is_today %}<small class="badge bg-dark">오늘</small>{% endif %}
+            </div>
+            <div class="card-body p-2">
+                {% for t in day.trainings %}
+                <span class="badge bg-success-subtle text-success w-100 text-start mb-1" style="font-size:.65rem;">
+                    <i class="bi bi-clock"></i> {{ t.start_time|time:"H:i" }} {{ t.title }}
+                </span>
+                {% endfor %}
+                <!-- 슬롯별 요약 -->
+                {% for slot in day.slots %}
+                <div class="mb-1 slot-summary-{{ day.date|date:'Ymd' }}-{{ slot.code|cut:':' }}" style="font-size:.68rem; line-height:1.4;">
+                    <span class="text-muted fw-bold">{{ slot.label|slice:":5" }}</span>
+                    {% if slot.user_attending %}<i class="bi bi-check-circle-fill text-success ms-1"></i>{% endif %}
+                    <div class="ms-1">
+                        {% for name in slot.attendees %}
+                        <span class="badge bg-primary-subtle text-primary" style="font-size:.6rem;">{{ name }}</span>
+                        {% empty %}<span class="text-muted">-</span>{% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% if day.is_past %}
+                <div class="text-center mt-1"><small class="text-muted"><i class="bi bi-lock"></i> 지난 날짜</small></div>
+                {% else %}
+                <div class="text-center mt-2">
+                    {% if day.user_attending %}
+                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check2"></i> 참석예정</span>
+                    {% else %}
+                    <span class="badge bg-light text-muted">탭하여 등록</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 모바일: 카드 리스트 -->
+<div class="d-md-none d-flex flex-column gap-2 mb-4">
+    {% for day in this_week %}
+    <div class="card {% if day.is_today %}border-warning border-2{% endif %}
+                {% if not day.is_past %}day-card{% endif %}"
+         {% if not day.is_past %}
+         data-date="{{ day.date|date:'Y-m-d' }}"
+         data-label="{{ day.date|date:'n월 j일' }} ({{ day.day_name }})"
+         data-slots="{{ day.slots_json|escape }}"
+         style="cursor:pointer;"
+         {% endif %}>
+        <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-start gap-3">
+                <div class="text-center" style="min-width:48px;">
+                    <div class="small fw-bold {% if day.is_weekend %}text-danger{% else %}text-muted{% endif %}">{{ day.day_name }}</div>
+                    <div class="fs-4 fw-bold {% if day.is_today %}text-warning{% endif %}">{{ day.date|date:"j" }}</div>
+                    {% if day.is_today %}<span class="badge bg-warning text-dark" style="font-size:.6rem;">오늘</span>{% endif %}
+                </div>
+                <div class="flex-grow-1">
+                    {% for t in day.trainings %}
+                    <span class="badge bg-success-subtle text-success me-1 mb-1" style="font-size:.65rem;">{{ t.start_time|time:"H:i" }} {{ t.title }}</span>
+                    {% endfor %}
+                    {% for slot in day.slots %}
+                    <div class="d-flex align-items-center gap-1 mb-1 slot-summary-{{ day.date|date:'Ymd' }}-{{ slot.code|cut:':' }}" style="font-size:.75rem;">
+                        <span class="text-muted fw-semibold" style="min-width:60px;">{{ slot.label|slice:":5" }}</span>
+                        {% if slot.user_attending %}<i class="bi bi-check-circle-fill text-success"></i>{% endif %}
+                        {% for name in slot.attendees %}
+                        <span class="badge bg-primary-subtle text-primary" style="font-size:.65rem;">{{ name }}</span>
+                        {% empty %}<span class="text-muted small">-</span>{% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="ms-auto">
+                    {% if day.is_past %}
+                    <i class="bi bi-lock text-muted"></i>
+                    {% elif day.user_attending %}
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                    {% else %}
+                    <i class="bi bi-plus-circle text-muted fs-5"></i>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ══ 다음 주 ══ -->
+<div class="d-flex align-items-center gap-2 mb-2">
+    <span class="badge bg-primary" style="font-size:.85rem;">다음 주</span>
+    <small class="text-muted">{{ next_monday|date:"n월 j일" }} ~ {{ next_sunday|date:"n월 j일" }}</small>
+</div>
+
+<!-- 데스크탑 -->
+<div class="row g-2 d-none d-md-flex mb-4">
+    {% for day in next_week %}
+    <div class="col">
+        <div class="card h-100 {% if day.is_today %}border-warning border-2{% elif day.is_weekend %}bg-light{% endif %}
+                    {% if not day.is_past %}day-card{% endif %}"
+             {% if not day.is_past %}
+             data-date="{{ day.date|date:'Y-m-d' }}"
+             data-label="{{ day.date|date:'n월 j일' }} ({{ day.day_name }})"
+             data-slots="{{ day.slots_json|escape }}"
+             style="cursor:pointer;"
+             {% endif %}>
+            <div class="card-header text-center py-2
+                {% if day.is_today %}bg-warning text-dark{% elif day.is_weekend %}bg-light text-muted{% else %}bg-white{% endif %}">
+                <div class="fw-bold">{{ day.day_name }}</div>
+                <div class="{% if day.is_today %}fw-bold{% else %}text-muted{% endif %}" style="font-size:1.3rem;">{{ day.date|date:"j" }}</div>
+                {% if day.is_today %}<small class="badge bg-dark">오늘</small>{% endif %}
+            </div>
+            <div class="card-body p-2">
+                {% for t in day.trainings %}
+                <span class="badge bg-success-subtle text-success w-100 text-start mb-1" style="font-size:.65rem;">
+                    <i class="bi bi-clock"></i> {{ t.start_time|time:"H:i" }} {{ t.title }}
+                </span>
+                {% endfor %}
+                {% for slot in day.slots %}
+                <div class="mb-1 slot-summary-{{ day.date|date:'Ymd' }}-{{ slot.code|cut:':' }}" style="font-size:.68rem; line-height:1.4;">
+                    <span class="text-muted fw-bold">{{ slot.label|slice:":5" }}</span>
+                    {% if slot.user_attending %}<i class="bi bi-check-circle-fill text-success ms-1"></i>{% endif %}
+                    <div class="ms-1">
+                        {% for name in slot.attendees %}
+                        <span class="badge bg-primary-subtle text-primary" style="font-size:.6rem;">{{ name }}</span>
+                        {% empty %}<span class="text-muted">-</span>{% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% if day.is_past %}
+                <div class="text-center mt-1"><small class="text-muted"><i class="bi bi-lock"></i> 지난 날짜</small></div>
+                {% else %}
+                <div class="text-center mt-2">
+                    {% if day.user_attending %}
+                    <span class="badge bg-success-subtle text-success"><i class="bi bi-check2"></i> 참석예정</span>
+                    {% else %}
+                    <span class="badge bg-light text-muted">탭하여 등록</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 모바일 -->
+<div class="d-md-none d-flex flex-column gap-2 mb-4">
+    {% for day in next_week %}
+    <div class="card {% if day.is_today %}border-warning border-2{% endif %}
+                {% if not day.is_past %}day-card{% endif %}"
+         {% if not day.is_past %}
+         data-date="{{ day.date|date:'Y-m-d' }}"
+         data-label="{{ day.date|date:'n월 j일' }} ({{ day.day_name }})"
+         data-slots="{{ day.slots_json|escape }}"
+         style="cursor:pointer;"
+         {% endif %}>
+        <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-start gap-3">
+                <div class="text-center" style="min-width:48px;">
+                    <div class="small fw-bold {% if day.is_weekend %}text-danger{% else %}text-muted{% endif %}">{{ day.day_name }}</div>
+                    <div class="fs-4 fw-bold {% if day.is_today %}text-warning{% endif %}">{{ day.date|date:"j" }}</div>
+                    {% if day.is_today %}<span class="badge bg-warning text-dark" style="font-size:.6rem;">오늘</span>{% endif %}
+                </div>
+                <div class="flex-grow-1">
+                    {% for t in day.trainings %}
+                    <span class="badge bg-success-subtle text-success me-1 mb-1" style="font-size:.65rem;">{{ t.start_time|time:"H:i" }} {{ t.title }}</span>
+                    {% endfor %}
+                    {% for slot in day.slots %}
+                    <div class="d-flex align-items-center gap-1 mb-1 slot-summary-{{ day.date|date:'Ymd' }}-{{ slot.code|cut:':' }}" style="font-size:.75rem;">
+                        <span class="text-muted fw-semibold" style="min-width:60px;">{{ slot.label|slice:":5" }}</span>
+                        {% if slot.user_attending %}<i class="bi bi-check-circle-fill text-success"></i>{% endif %}
+                        {% for name in slot.attendees %}
+                        <span class="badge bg-primary-subtle text-primary" style="font-size:.65rem;">{{ name }}</span>
+                        {% empty %}<span class="text-muted small">-</span>{% endfor %}
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="ms-auto">
+                    {% if day.is_past %}
+                    <i class="bi bi-lock text-muted"></i>
+                    {% elif day.user_attending %}
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                    {% else %}
+                    <i class="bi bi-plus-circle text-muted fs-5"></i>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ══ 시간대 선택 모달 ══ -->
+<div class="modal fade" id="slotModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-1">
+                <h5 class="modal-title fw-bold" id="slotModalLabel"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-1" id="slotModalBody"></div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const csrfToken = '{{ csrf_token }}';
+const toggleUrl = '{% url "schedule:attendance_toggle" %}';
+
+let currentDate = null;
+let currentSlots = null;
+
+document.querySelectorAll('.day-card').forEach(card => {
+    card.addEventListener('click', () => {
+        currentDate = card.dataset.date;
+        currentSlots = JSON.parse(card.dataset.slots);
+        document.getElementById('slotModalLabel').textContent = card.dataset.label;
+        renderModalBody();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('slotModal')).show();
+    });
+});
+
+function renderModalBody() {
+    const body = document.getElementById('slotModalBody');
+    const slotOrder = ['18:00', '19:30', '21:00'];
+    body.innerHTML = slotOrder.map(code => {
+        const slot = currentSlots[code];
+        const attending = slot.user_attending;
+        const names = slot.attendees;
+        return `
+        <div class="border rounded p-3 mb-2" id="slot-row-${code.replace(':','')}">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="fw-semibold fs-6">${slot.label}</span>
+                <button class="btn btn-sm ${attending ? 'btn-danger' : 'btn-outline-success'} slot-toggle-btn"
+                        data-slot="${code}" data-attending="${attending}">
+                    ${attending
+                        ? '<i class="bi bi-x-circle"></i> 참석 취소'
+                        : '<i class="bi bi-check-circle"></i> 참석 예정'}
+                </button>
+            </div>
+            <div class="slot-names" id="slot-names-${code.replace(':','')}">
+                ${names.length
+                    ? names.map(n => `<span class="badge bg-primary-subtle text-primary me-1">${n}</span>`).join('')
+                    : '<span class="text-muted small">참석 예정 없음</span>'}
+            </div>
+            <div class="text-muted small mt-1"><span id="slot-count-${code.replace(':','')}">${slot.count}</span>명</div>
+        </div>`;
+    }).join('');
+
+    body.querySelectorAll('.slot-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => toggleSlot(btn));
+    });
+}
+
+async function toggleSlot(btn) {
+    const slotCode = btn.dataset.slot;
+    btn.disabled = true;
+
+    const res = await fetch(toggleUrl, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken},
+        body: `date=${currentDate}&time_slot=${encodeURIComponent(slotCode)}`,
+    });
+    const data = await res.json();
+    if (!res.ok) { btn.disabled = false; return; }
+
+    // 모달 내 슬롯 상태 업데이트
+    const attending = data.attending;
+    currentSlots[slotCode].user_attending = attending;
+    currentSlots[slotCode].attendees = data.names;
+    currentSlots[slotCode].count = data.count;
+
+    const key = slotCode.replace(':','');
+    document.getElementById(`slot-names-${key}`).innerHTML = data.names.length
+        ? data.names.map(n => `<span class="badge bg-primary-subtle text-primary me-1">${n}</span>`).join('')
+        : '<span class="text-muted small">참석 예정 없음</span>';
+    document.getElementById(`slot-count-${key}`).textContent = data.count;
+
+    btn.dataset.attending = attending;
+    btn.className = btn.className.replace(
+        attending ? 'btn-outline-success' : 'btn-danger',
+        attending ? 'btn-danger' : 'btn-outline-success'
+    );
+    btn.innerHTML = attending
+        ? '<i class="bi bi-x-circle"></i> 참석 취소'
+        : '<i class="bi bi-check-circle"></i> 참석 예정';
+    btn.disabled = false;
+
+    updateCardSummary(currentDate, currentSlots);
+}
+
+function updateCardSummary(dateStr, slots) {
+    const dateParts = dateStr.replace(/-/g, '').slice(0, 8);
+    let userAttendingAny = false;
+
+    Object.entries(slots).forEach(([code, slot]) => {
+        const key = code.replace(':','');
+        const els = document.querySelectorAll(`.slot-summary-${dateParts}-${key}`);
+        els.forEach(el => {
+            const icon = slot.user_attending ? '<i class="bi bi-check-circle-fill text-success ms-1"></i>' : '';
+            const badges = slot.attendees.length
+                ? slot.attendees.map(n => `<span class="badge bg-primary-subtle text-primary" style="font-size:.65rem;">${n}</span>`).join('')
+                : '<span class="text-muted">-</span>';
+            const label = el.querySelector ? el : el;
+            el.innerHTML = `<span class="text-muted fw-bold">${slot.label.slice(0,5)}</span>${icon}<div class="ms-1">${badges}</div>`;
+        });
+        if (slot.user_attending) userAttendingAny = true;
+    });
+
+    // 카드 내 상태 아이콘 업데이트
+    document.querySelectorAll('.day-card').forEach(card => {
+        if (card.dataset.date === dateStr) {
+            card.dataset.slots = JSON.stringify(slots);
+        }
+    });
+}
+</script>
+{% endblock %}
+

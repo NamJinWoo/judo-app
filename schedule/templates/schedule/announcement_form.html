@@ -1,0 +1,28 @@
+{% extends 'schedule/base.html' %}
+{% block title %}공지사항 {{ action }} - 청림유도관{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">공지사항 {{ action }}</h4>
+    <a href="{% url 'schedule:announcement_list' %}" class="btn btn-outline-secondary btn-sm">취소</a>
+</div>
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label fw-medium">제목</label>
+                {{ form.title }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-medium">내용</label>
+                {{ form.content }}
+            </div>
+            <div class="mb-4 form-check">
+                {{ form.is_pinned }}
+                <label class="form-check-label">상단에 고정</label>
+            </div>
+            <button type="submit" class="btn btn-warning w-100 fw-semibold">{{ action }}하기</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

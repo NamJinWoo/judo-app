@@ -1,0 +1,23 @@
+{% extends 'schedule/base.html' %}
+{% block title %}내 정보 수정 - 청림유도관{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-person-gear"></i> 내 정보 수정</h4>
+</div>
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="form-label fw-medium">현재 띠/단</label>
+                <select name="belt" class="form-select">
+                    {% for value, label in belt_choices %}
+                    <option value="{{ value }}" {% if profile.belt == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-warning w-100 fw-semibold">저장</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'schedule/base.html' %}
+
+{% block title %}{{ member.name }} - 유도 일정관리{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">{{ member.name }}</h4>
+    <div>
+        <a href="/admin/schedule/member/{{ member.pk }}/change/" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-pencil"></i> 수정
+        </a>
+        <a href="{% url 'schedule:member_list' %}" class="btn btn-outline-secondary btn-sm ms-1">
+            <i class="bi bi-arrow-left"></i> 목록
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-title text-muted mb-3">기본 정보</h6>
+                <dl class="row mb-0">
+                    <dt class="col-5">띠/단</dt>
+                    <dd class="col-7">
+                        <span class="badge {% if 'black' in member.belt %}bg-dark{% else %}bg-secondary{% endif %}">
+                            {{ member.get_belt_display }}
+                        </span>
+                    </dd>
+                    <dt class="col-5">체급</dt>
+                    <dd class="col-7">{{ member.get_weight_class_display|default:"-" }}</dd>
+                    <dt class="col-5">연락처</dt>
+                    <dd class="col-7">{{ member.phone|default:"-" }}</dd>
+                    <dt class="col-5">생년월일</dt>
+                    <dd class="col-7">{{ member.birth_date|default:"-" }}</dd>
+                    <dt class="col-5">등록일</dt>
+                    <dd class="col-7">{{ member.join_date }}</dd>
+                </dl>
+                {% if member.note %}
+                <hr>
+                <p class="mb-0 text-muted small">{{ member.note }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-white fw-semibold">
+                <i class="bi bi-trophy-fill text-warning"></i> 대회 결과
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>대회</th><th>체급</th><th>결과</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for r in competition_results %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'schedule:competition_detail' r.competition.pk %}" class="text-decoration-none">
+                                    {{ r.competition.name }}
+                                </a>
+                                <br><small class="text-muted">{{ r.competition.start_date }}</small>
+                            </td>
+                            <td>{{ r.weight_class|default:"-" }}</td>
+                            <td>
+                                {% if r.result == 'gold' %}<span class="badge bg-warning text-dark">금메달</span>
+                                {% elif r.result == 'silver' %}<span class="badge bg-secondary">은메달</span>
+                                {% elif r.result == 'bronze' %}<span class="badge" style="background:#cd7f32">동메달</span>
+                                {% else %}<span class="badge bg-light text-muted">{{ r.get_result_display }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted py-3">대회 기록 없음</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-white fw-semibold">
+                <i class="bi bi-calendar-week-fill text-success"></i> 최근 훈련 참석
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for t in recent_trainings %}
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span>{{ t.title }}</span>
+                        <small class="text-muted">{{ t.date }}</small>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted text-center">훈련 기록 없음</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

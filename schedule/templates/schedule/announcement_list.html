@@ -1,0 +1,38 @@
+{% extends 'schedule/base.html' %}
+{% block title %}공지사항 - 청림유도관{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-megaphone-fill"></i> 공지사항</h4>
+    {% if request.user.is_staff %}
+    <a href="{% url 'schedule:announcement_create' %}" class="btn btn-warning btn-sm">
+        <i class="bi bi-plus-lg"></i> 공지 등록
+    </a>
+    {% endif %}
+</div>
+
+{% if announcements %}
+<div class="d-flex flex-column gap-3">
+    {% for ann in announcements %}
+    <div class="card {% if ann.is_pinned %}border-warning{% endif %}">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    {% if ann.is_pinned %}<span class="badge bg-warning text-dark me-1"><i class="bi bi-pin-fill"></i> 고정</span>{% endif %}
+                    <a href="{% url 'schedule:announcement_detail' ann.pk %}" class="fw-semibold text-decoration-none text-dark fs-6">
+                        {{ ann.title }}
+                    </a>
+                </div>
+                <small class="text-muted ms-2 text-nowrap">{{ ann.created_at|date:"n/j" }}</small>
+            </div>
+            <p class="text-muted small mt-1 mb-0">{{ ann.content|truncatechars:80 }}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-megaphone" style="font-size:3rem;"></i>
+    <p class="mt-3">등록된 공지사항이 없습니다.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends 'schedule/base.html' %}
+{% block title %}알림 - 청림유도관{% endblock %}
+{% block content %}
+<h4 class="mb-4"><i class="bi bi-bell-fill"></i> 알림</h4>
+
+{% if notifications %}
+<div class="d-flex flex-column gap-2">
+    {% for n in notifications %}
+    <div class="card {% if not n.is_read %}border-warning{% endif %}">
+        <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center">
+            <div>
+                {% if not n.is_read %}<span class="badge bg-warning text-dark me-1">새알림</span>{% endif %}
+                {% if n.link %}<a href="{{ n.link }}" class="text-decoration-none text-dark">{{ n.message }}</a>
+                {% else %}{{ n.message }}{% endif %}
+            </div>
+            <small class="text-muted ms-3 text-nowrap">{{ n.created_at|date:"n/j H:i" }}</small>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center text-muted py-5">
+    <i class="bi bi-bell-slash" style="font-size:3rem;"></i>
+    <p class="mt-3">알림이 없습니다.</p>
+</div>
+{% endif %}
+{% endblock %}
