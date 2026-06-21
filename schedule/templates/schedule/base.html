@@ -109,13 +109,6 @@
                         <i class="bi bi-trophy-fill"></i> 대회 일정
                     </a>
                 </li>
-                {% if request.user.is_staff %}
-                <li class="nav-item mt-3">
-                    <a class="nav-link text-muted" href="/admin/">
-                        <i class="bi bi-gear-fill"></i> 관리자 패널
-                    </a>
-                </li>
-                {% endif %}
                 <li class="nav-item mt-2">
                     <a class="nav-link text-muted" href="{% url 'accounts:logout' %}">
                         <i class="bi bi-box-arrow-right"></i> 로그아웃
@@ -135,7 +128,7 @@
     <a href="{% url 'schedule:home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
         <i class="bi bi-house-fill"></i><span>홈</span>
     </a>
-    <a href="{% url 'schedule:attendance_week' %}" class="{% if 'attendance' in request.resolver_match.url_name %}active{% endif %}">
+    <a href="{% url 'schedule:attendance_week' %}" class="{% if 'attendance' in request.resolver_match.url_name and 'confirm' not in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-person-check-fill"></i><span>출석</span>
     </a>
     <a href="{% url 'schedule:training_list' %}" class="{% if 'training' in request.resolver_match.url_name %}active{% endif %}">
@@ -147,6 +140,11 @@
     <a href="{% url 'schedule:announcement_list' %}" class="{% if 'announcement' in request.resolver_match.url_name %}active{% endif %}">
         <i class="bi bi-megaphone-fill"></i><span>공지</span>
     </a>
+    {% if request.user.is_staff %}
+    <a href="{% url 'schedule:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' or 'member' in request.resolver_match.url_name or 'confirm' in request.resolver_match.url_name %}active{% endif %}">
+        <i class="bi bi-shield-fill"></i><span>관리</span>
+    </a>
+    {% endif %}
 </nav>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

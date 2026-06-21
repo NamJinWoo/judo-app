@@ -1,138 +1,137 @@
 {% extends 'schedule/base.html' %}
-
-{% block title %}대시보드 - 유도 일정관리{% endblock %}
+{% block title %}대시보드 - 청림유도관{% endblock %}
 
 {% block content %}
-<h4 class="mb-4"><i class="bi bi-speedometer2"></i> 대시보드</h4>
 
-<div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card text-center p-3">
-            <div class="display-6 fw-bold text-primary">{{ active_members }}</div>
-            <div class="text-muted">활성 회원</div>
+<!-- 상단 통계 카드 -->
+<div class="card mb-4" style="background: linear-gradient(135deg, #1a1a2e, #2d2d4e); color: white;">
+    <div class="card-body p-4">
+        <div class="small mb-3" style="color:#adb5bd;">
+            <i class="bi bi-speedometer2 me-1"></i> 도장 현황
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-center p-3">
-            <div class="display-6 fw-bold text-success">{{ upcoming_trainings.count }}</div>
-            <div class="text-muted">예정 훈련</div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-center p-3">
-            <div class="display-6 fw-bold text-warning">{{ upcoming_competitions.count }}</div>
-            <div class="text-muted">예정 대회</div>
+        <div class="row g-0 text-center">
+            <div class="col-4">
+                <div class="fw-bold" style="font-size:2rem;">{{ active_members }}</div>
+                <div style="font-size:.75rem; color:#adb5bd;">활성 회원</div>
+            </div>
+            <div class="col-4 border-start border-end" style="border-color:rgba(255,255,255,.1) !important;">
+                <div class="fw-bold text-success" style="font-size:2rem;">{{ upcoming_trainings.count }}</div>
+                <div style="font-size:.75rem; color:#adb5bd;">예정 훈련</div>
+            </div>
+            <div class="col-4">
+                <div class="fw-bold text-warning" style="font-size:2rem;">{{ upcoming_competitions.count }}</div>
+                <div style="font-size:.75rem; color:#adb5bd;">예정 대회</div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="row g-4">
-    <!-- 이번 주 출석 예정 위젯 -->
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center fw-semibold">
-                <span><i class="bi bi-person-check-fill text-primary"></i> 이번 주 출석 예정</span>
-                <a href="{% url 'schedule:attendance_week' %}" class="btn btn-sm btn-outline-primary">자세히 보기</a>
+<!-- 이번 주 출석 예정 -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="fw-bold mb-0"><i class="bi bi-person-check-fill text-primary"></i> 이번 주 출석 예정</h6>
+    <a href="{% url 'schedule:attendance_week' %}" class="btn btn-outline-primary btn-sm" style="font-size:.75rem;">전체보기</a>
+</div>
+
+<div class="d-flex gap-2 mb-4" style="overflow-x:auto; padding-bottom:4px;">
+    {% for day in week_attendance %}
+    <div class="card flex-shrink-0 {% if day.is_today %}border-warning border-2{% endif %}"
+         style="min-width:88px; {% if day.is_past %}opacity:.55;{% endif %}">
+        <div class="card-body p-2 text-center">
+            <div class="small fw-bold {% if day.is_today %}text-warning{% else %}text-muted{% endif %}">{{ day.day_name }}</div>
+            <div class="fw-bold {% if day.is_today %}text-warning{% endif %}" style="font-size:1.3rem;">{{ day.date|date:"j" }}</div>
+            {% if day.total_count %}
+            <span class="badge bg-primary-subtle text-primary" style="font-size:.6rem;">{{ day.total_count }}명</span>
+            {% else %}
+            <span class="text-muted" style="font-size:.7rem;">-</span>
+            {% endif %}
+            {% for slot in day.slots %}
+            {% if slot.count > 0 %}
+            <div class="mt-1 text-start" style="font-size:.58rem;">
+                <div class="text-muted fw-bold">{{ slot.label|slice:":5" }}</div>
+                {% for name in slot.attendees %}
+                <span class="badge bg-light text-dark" style="font-size:.54rem;">{{ name }}</span>
+                {% endfor %}
             </div>
-            <div class="card-body p-0">
-                <div class="d-flex" style="overflow-x:auto;">
-                    {% for day in week_attendance %}
-                    <div class="flex-fill p-2 border-end {% if day.is_today %}bg-warning bg-opacity-10{% elif day.is_past %}bg-light{% endif %}"
-                         style="min-width: 110px;">
-                        <div class="text-center mb-1">
-                            <div class="small fw-bold text-muted">{{ day.day_name }}</div>
-                            <div class="fw-bold {% if day.is_today %}text-warning{% elif day.is_past %}text-muted{% endif %}">
-                                {{ day.date|date:"j" }}
-                            </div>
-                            {% if not day.is_past %}
-                            <span class="badge {% if day.total_count %}bg-success-subtle text-success{% else %}bg-light text-muted{% endif %}" style="font-size:.65rem;">
-                                총 {{ day.total_count }}명
-                            </span>
-                            {% endif %}
-                        </div>
-                        {% for slot in day.slots %}
-                        {% if slot.count > 0 %}
-                        <div class="mb-1" style="font-size:.65rem;">
-                            <span class="text-muted fw-semibold">{{ slot.label|slice:":5" }}</span>
-                            <div>
-                                {% for name in slot.attendees %}
-                                <span class="badge bg-primary-subtle text-primary" style="font-size:.58rem;">{{ name }}</span>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-                        {% endfor %}
-                        {% if not day.is_past and day.total_count == 0 %}
-                        <div class="text-center"><span class="text-muted" style="font-size:.7rem;">-</span></div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 다가오는 훈련 -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="fw-bold mb-0"><i class="bi bi-calendar-week-fill text-success"></i> 다가오는 훈련</h6>
+    <a href="{% url 'schedule:training_list' %}" class="btn btn-outline-success btn-sm" style="font-size:.75rem;">전체보기</a>
+</div>
+
+{% if upcoming_trainings %}
+<div class="d-flex flex-column gap-2 mb-4">
+    {% for t in upcoming_trainings %}
+    <div class="card">
+        <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+            <div class="text-center" style="min-width:40px;">
+                <div class="small fw-bold text-muted">
+                    {% with wd=t.date.weekday %}
+                    {% if wd == 0 %}월{% elif wd == 1 %}화{% elif wd == 2 %}수{% elif wd == 3 %}목{% elif wd == 4 %}금{% elif wd == 5 %}<span class="text-primary">토</span>{% else %}<span class="text-danger">일</span>{% endif %}
+                    {% endwith %}
                 </div>
+                <div class="fw-bold">{{ t.date|date:"j" }}</div>
+                <div class="text-muted" style="font-size:.65rem;">{{ t.date|date:"n월" }}</div>
+            </div>
+            <div class="flex-grow-1">
+                <div class="fw-semibold">{{ t.title }}</div>
+                <div class="text-muted" style="font-size:.8rem;">{{ t.location }}</div>
+            </div>
+            <div class="text-end">
+                <span class="badge bg-success-subtle text-success">{{ t.start_time|time:"H:i" }}~{{ t.end_time|time:"H:i" }}</span>
             </div>
         </div>
     </div>
-
-    <!-- 다가오는 훈련 -->
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header bg-white fw-semibold">
-                <i class="bi bi-calendar-week-fill text-success"></i> 다가오는 훈련
-            </div>
-            <div class="card-body p-0">
-                {% if upcoming_trainings %}
-                <ul class="list-group list-group-flush">
-                    {% for t in upcoming_trainings %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-semibold">{{ t.title }}</div>
-                            <small class="text-muted">{{ t.location }}</small>
-                        </div>
-                        <div class="text-end">
-                            <span class="badge bg-success-subtle text-success">{{ t.date }}</span>
-                            <div><small class="text-muted">{{ t.start_time|time:"H:i" }}~{{ t.end_time|time:"H:i" }}</small></div>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="text-muted p-3 mb-0">예정된 훈련이 없습니다.</p>
-                {% endif %}
-            </div>
-            <div class="card-footer bg-white">
-                <a href="{% url 'schedule:training_list' %}" class="btn btn-sm btn-outline-success">전체 보기</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- 다가오는 대회 -->
-    <div class="col-md-6">
-        <div class="card h-100">
-            <div class="card-header bg-white fw-semibold">
-                <i class="bi bi-trophy-fill text-warning"></i> 다가오는 대회
-            </div>
-            <div class="card-body p-0">
-                {% if upcoming_competitions %}
-                <ul class="list-group list-group-flush">
-                    {% for c in upcoming_competitions %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-semibold">
-                                <a href="{% url 'schedule:competition_detail' c.pk %}" class="text-decoration-none text-dark">{{ c.name }}</a>
-                            </div>
-                            <small class="text-muted">{{ c.location }}</small>
-                        </div>
-                        <span class="badge bg-warning-subtle text-warning-emphasis">{{ c.start_date }}</span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="text-muted p-3 mb-0">예정된 대회가 없습니다.</p>
-                {% endif %}
-            </div>
-            <div class="card-footer bg-white">
-                <a href="{% url 'schedule:competition_list' %}" class="btn btn-sm btn-outline-warning">전체 보기</a>
-            </div>
-        </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card mb-4">
+    <div class="card-body text-center text-muted py-4">
+        <i class="bi bi-calendar-x" style="font-size:2rem;"></i>
+        <p class="mt-2 mb-2 small">예정된 훈련이 없습니다.</p>
+        <a href="{% url 'schedule:training_create' %}" class="btn btn-outline-success btn-sm">훈련 추가하기</a>
     </div>
 </div>
+{% endif %}
+
+<!-- 다가오는 대회 -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="fw-bold mb-0"><i class="bi bi-trophy-fill text-warning"></i> 다가오는 대회</h6>
+    <a href="{% url 'schedule:competition_list' %}" class="btn btn-outline-warning btn-sm" style="font-size:.75rem;">전체보기</a>
+</div>
+
+{% if upcoming_competitions %}
+<div class="d-flex flex-column gap-2 mb-4">
+    {% for c in upcoming_competitions %}
+    <div class="card">
+        <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+            <div class="text-center" style="min-width:40px;">
+                <div class="fw-bold text-warning">{{ c.start_date|date:"j" }}</div>
+                <div class="text-muted" style="font-size:.65rem;">{{ c.start_date|date:"n월" }}</div>
+            </div>
+            <div class="flex-grow-1">
+                <a href="{% url 'schedule:competition_detail' c.pk %}" class="text-decoration-none text-dark fw-semibold">{{ c.name }}</a>
+                <div class="text-muted" style="font-size:.8rem;">{{ c.location }}</div>
+            </div>
+            <i class="bi bi-chevron-right text-muted"></i>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card mb-4">
+    <div class="card-body text-center text-muted py-4">
+        <i class="bi bi-trophy" style="font-size:2rem;"></i>
+        <p class="mt-2 mb-2 small">예정된 대회가 없습니다.</p>
+        <a href="{% url 'schedule:competition_create' %}" class="btn btn-outline-warning btn-sm">대회 추가하기</a>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}

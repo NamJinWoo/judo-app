@@ -1,102 +1,124 @@
 {% extends 'schedule/base.html' %}
-
-{% block title %}{{ member.name }} - 유도 일정관리{% endblock %}
+{% block title %}{{ member.name }} - 청림유도관{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="mb-0">{{ member.name }}</h4>
-    <div>
-        <a href="/admin/schedule/member/{{ member.pk }}/change/" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-pencil"></i> 수정
-        </a>
-        <a href="{% url 'schedule:member_list' %}" class="btn btn-outline-secondary btn-sm ms-1">
-            <i class="bi bi-arrow-left"></i> 목록
-        </a>
+
+<!-- 회원 프로필 카드 -->
+<div class="card mb-4" style="background: linear-gradient(135deg, #1a1a2e, #2d2d4e); color: white;">
+    <div class="card-body p-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="rounded-circle bg-warning d-flex align-items-center justify-content-center fw-bold text-dark flex-shrink-0"
+                 style="width:52px; height:52px; font-size:1.3rem;">
+                {{ member.name|first }}
+            </div>
+            <div class="flex-grow-1">
+                <div class="fw-bold fs-5">{{ member.name }}</div>
+                <div class="d-flex align-items-center gap-1 mt-1">
+                    <span class="badge {% if 'black' in member.belt %}bg-dark{% else %}bg-secondary{% endif %}">
+                        {{ member.get_belt_display }}
+                    </span>
+                    {% if member.weight_class %}
+                    <span class="badge bg-warning text-dark">{{ member.get_weight_class_display }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <a href="{% url 'schedule:member_edit' member.pk %}" class="btn btn-outline-light btn-sm" style="font-size:.8rem;">
+                <i class="bi bi-pencil"></i> 수정
+            </a>
+        </div>
+        <div class="mt-3 d-flex flex-wrap gap-3">
+            {% if member.phone %}
+            <span style="font-size:.82rem; color:#adb5bd;"><i class="bi bi-telephone me-1"></i>{{ member.phone }}</span>
+            {% endif %}
+            {% if member.birth_date %}
+            <span style="font-size:.82rem; color:#adb5bd;"><i class="bi bi-calendar me-1"></i>{{ member.birth_date }}</span>
+            {% endif %}
+            <span style="font-size:.82rem; color:#adb5bd;"><i class="bi bi-person-plus me-1"></i>{{ member.join_date }} 등록</span>
+        </div>
+        <div class="mt-3 pt-3 d-flex align-items-center gap-2" style="border-top:1px solid rgba(255,255,255,.1);">
+            <i class="bi bi-calendar-check text-warning"></i>
+            <span style="color:#adb5bd; font-size:.85rem;">이번 달 훈련 참석</span>
+            <span class="fw-bold text-warning ms-1">{{ this_month_trainings }}회</span>
+        </div>
+        {% if member.note %}
+        <div class="mt-2" style="font-size:.82rem; color:#adb5bd;">{{ member.note }}</div>
+        {% endif %}
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-body">
-                <h6 class="card-title text-muted mb-3">기본 정보</h6>
-                <dl class="row mb-0">
-                    <dt class="col-5">띠/단</dt>
-                    <dd class="col-7">
-                        <span class="badge {% if 'black' in member.belt %}bg-dark{% else %}bg-secondary{% endif %}">
-                            {{ member.get_belt_display }}
-                        </span>
-                    </dd>
-                    <dt class="col-5">체급</dt>
-                    <dd class="col-7">{{ member.get_weight_class_display|default:"-" }}</dd>
-                    <dt class="col-5">연락처</dt>
-                    <dd class="col-7">{{ member.phone|default:"-" }}</dd>
-                    <dt class="col-5">생년월일</dt>
-                    <dd class="col-7">{{ member.birth_date|default:"-" }}</dd>
-                    <dt class="col-5">등록일</dt>
-                    <dd class="col-7">{{ member.join_date }}</dd>
-                </dl>
-                {% if member.note %}
-                <hr>
-                <p class="mb-0 text-muted small">{{ member.note }}</p>
+<div class="mb-3">
+    <a href="{% url 'schedule:member_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i> 목록
+    </a>
+</div>
+
+<!-- 대회 결과 -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="fw-bold mb-0"><i class="bi bi-trophy-fill text-warning"></i> 대회 결과</h6>
+</div>
+
+{% if competition_results %}
+<div class="d-flex flex-column gap-2 mb-4">
+    {% for r in competition_results %}
+    <div class="card">
+        <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+            <div style="min-width:28px; text-align:center;">
+                {% if r.result == 'gold' %}<span class="badge bg-warning text-dark">금</span>
+                {% elif r.result == 'silver' %}<span class="badge bg-secondary">은</span>
+                {% elif r.result == 'bronze' %}<span class="badge" style="background:#cd7f32; color:white;">동</span>
+                {% else %}<span class="badge bg-light text-muted">{{ r.get_result_display }}</span>
                 {% endif %}
             </div>
-        </div>
-    </div>
-
-    <div class="col-md-8">
-        <div class="card mb-4">
-            <div class="card-header bg-white fw-semibold">
-                <i class="bi bi-trophy-fill text-warning"></i> 대회 결과
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-sm mb-0">
-                    <thead class="table-light">
-                        <tr><th>대회</th><th>체급</th><th>결과</th></tr>
-                    </thead>
-                    <tbody>
-                        {% for r in competition_results %}
-                        <tr>
-                            <td>
-                                <a href="{% url 'schedule:competition_detail' r.competition.pk %}" class="text-decoration-none">
-                                    {{ r.competition.name }}
-                                </a>
-                                <br><small class="text-muted">{{ r.competition.start_date }}</small>
-                            </td>
-                            <td>{{ r.weight_class|default:"-" }}</td>
-                            <td>
-                                {% if r.result == 'gold' %}<span class="badge bg-warning text-dark">금메달</span>
-                                {% elif r.result == 'silver' %}<span class="badge bg-secondary">은메달</span>
-                                {% elif r.result == 'bronze' %}<span class="badge" style="background:#cd7f32">동메달</span>
-                                {% else %}<span class="badge bg-light text-muted">{{ r.get_result_display }}</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr><td colspan="3" class="text-center text-muted py-3">대회 기록 없음</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header bg-white fw-semibold">
-                <i class="bi bi-calendar-week-fill text-success"></i> 최근 훈련 참석
-            </div>
-            <div class="card-body p-0">
-                <ul class="list-group list-group-flush">
-                    {% for t in recent_trainings %}
-                    <li class="list-group-item d-flex justify-content-between">
-                        <span>{{ t.title }}</span>
-                        <small class="text-muted">{{ t.date }}</small>
-                    </li>
-                    {% empty %}
-                    <li class="list-group-item text-muted text-center">훈련 기록 없음</li>
-                    {% endfor %}
-                </ul>
+            <div class="flex-grow-1">
+                <a href="{% url 'schedule:competition_detail' r.competition.pk %}" class="text-decoration-none text-dark fw-semibold">
+                    {{ r.competition.name }}
+                </a>
+                <div class="text-muted" style="font-size:.8rem;">
+                    {{ r.competition.start_date }}{% if r.weight_class %} &middot; {{ r.weight_class }}{% endif %}
+                </div>
             </div>
         </div>
     </div>
+    {% endfor %}
 </div>
+{% else %}
+<div class="card mb-4">
+    <div class="card-body text-center text-muted py-3 small">대회 기록 없음</div>
+</div>
+{% endif %}
+
+<!-- 최근 훈련 참석 -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="fw-bold mb-0"><i class="bi bi-calendar-week-fill text-success"></i> 최근 훈련 참석</h6>
+</div>
+
+{% if recent_trainings %}
+<div class="d-flex flex-column gap-2 mb-4">
+    {% for t in recent_trainings %}
+    <div class="card">
+        <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+            <div class="text-center" style="min-width:36px;">
+                <div class="fw-bold">{{ t.date|date:"j" }}</div>
+                <div class="text-muted" style="font-size:.65rem;">{{ t.date|date:"n월" }}</div>
+            </div>
+            <div class="fw-semibold flex-grow-1">{{ t.title }}</div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card mb-4">
+    <div class="card-body text-center text-muted py-3 small">훈련 기록 없음</div>
+</div>
+{% endif %}
+
+<!-- 삭제 -->
+<form method="post" action="{% url 'schedule:member_delete' member.pk %}"
+      onsubmit="return confirm('{{ member.name }} 회원을 삭제할까요?')">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+        <i class="bi bi-trash"></i> 회원 삭제
+    </button>
+</form>
+
 {% endblock %}

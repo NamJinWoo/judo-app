@@ -1,0 +1,50 @@
+{% extends 'schedule/base.html' %}
+{% block title %}회원 {{ action }} - 청림유도관{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0"><i class="bi bi-person-fill"></i> 회원 {{ action }}</h4>
+    {% if member %}
+    <a href="{% url 'schedule:member_detail' member.pk %}" class="btn btn-outline-secondary btn-sm">취소</a>
+    {% else %}
+    <a href="{% url 'schedule:member_list' %}" class="btn btn-outline-secondary btn-sm">취소</a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label fw-medium">이름 *</label>
+                {{ form.name }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-medium">띠/단 *</label>
+                {{ form.belt }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-medium">체급</label>
+                {{ form.weight_class }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-medium">생년월일</label>
+                {{ form.birth_date }}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-medium">연락처</label>
+                {{ form.phone }}
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-medium">메모</label>
+                {{ form.note }}
+            </div>
+            <div class="mb-4 form-check">
+                {{ form.is_active }}
+                <label class="form-check-label fw-medium">활성 회원</label>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 fw-semibold">{{ action }}하기</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

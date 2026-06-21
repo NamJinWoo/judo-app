@@ -8,7 +8,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from .models import Member, TrainingSession, Competition, AttendancePlan, Announcement, Notification
-from .forms import TrainingForm, CompetitionForm, AnnouncementForm
+from .forms import TrainingForm, CompetitionForm, AnnouncementForm, MemberForm
 from accounts.models import UserProfile
 
 
@@ -32,12 +32,21 @@ def home(request):
             'total': others.count() + 1,
         })
 
+    # 이번 달 출석 일수 (오늘까지)
+    this_month_days = AttendancePlan.objects.filter(
+        user=request.user,
+        date__year=today.year,
+        date__month=today.month,
+        date__lte=today,
+    ).values('date').distinct().count()
+
     announcements = Announcement.objects.all()[:3]
 
     return render(request, 'schedule/home.html', {
         'today': today,
         'upcoming': upcoming,
         'announcements': announcements,
+        'this_month_days': this_month_days,
     })
 
 
@@ -101,14 +110,46 @@ def member_list(request):
 
 
 @staff_member_required
+def member_create(request):
+    form = MemberForm(request.POST or None)
+    if form.is_valid():
+        form.save()
+        return redirect('schedule:member_list')
+    return render(request, 'schedule/member_form.html', {'form': form, 'action': '등록'})
+
+
+@staff_member_required
+def member_edit(request, pk):
+    member = get_object_or_404(Member, pk=pk)
+    form = MemberForm(request.POST or None, instance=member)
+    if form.is_valid():
+        form.save()
+        return redirect('schedule:member_detail', pk=pk)
+    return render(request, 'schedule/member_form.html', {'form': form, 'action': '수정', 'member': member})
+
+
+@staff_member_required
+@require_POST
+def member_delete(request, pk):
+    get_object_or_404(Member, pk=pk).delete()
+    return redirect('schedule:member_list')
+
+
+@staff_member_required
 def member_detail(request, pk):
     member = get_object_or_404(Member, pk=pk)
     recent_trainings = member.trainings.order_by('-date')[:10]
     competition_results = member.competitionresult_set.select_related('competition').order_by('-competition__start_date')
+    today = timezone.now().date()
+    this_month_trainings = member.trainings.filter(
+        date__year=today.year, date__month=today.month
+    ).count()
     return render(request, 'schedule/member_detail.html', {
         'member': member,
         'recent_trainings': recent_trainings,
         'competition_results': competition_results,
+        'this_month_trainings': this_month_trainings,
+        'today': today,
     })
 
 
@@ -305,24 +346,37 @@ def my_attendance(request, year=None, month=None):
     else:
         current = date(today.year, today.month, 1)
 
-    plans = AttendancePlan.objects.filter(
+    all_plans = AttendancePlan.objects.filter(
         user=request.user,
         date__year=current.year,
         date__month=current.month,
-        date__lte=today,
     ).order_by('date', 'time_slot')
 
-    # 날짜별로 그룹핑
     by_date = {}
-    for p in plans:
+    for p in all_plans:
         by_date.setdefault(p.date, []).append(p)
 
-    records = [
-        {'date': d, 'slots': ps, 'count': len(ps)}
-        for d, ps in sorted(by_date.items())
-    ]
+    attended_days = sum(1 for d in by_date if d <= today)
 
-    total_days = len(by_date)
+    cal = calendar.monthcalendar(current.year, current.month)
+    weeks = []
+    for week in cal:
+        week_data = []
+        for day_num in week:
+            if day_num == 0:
+                week_data.append(None)
+            else:
+                d = date(current.year, current.month, day_num)
+                day_plans = by_date.get(d, [])
+                week_data.append({
+                    'date': d,
+                    'plans': day_plans,
+                    'count': len(day_plans),
+                    'is_today': d == today,
+                    'is_past': d < today,
+                    'is_future': d > today,
+                })
+        weeks.append(week_data)
 
     if current.month == 1:
         prev = date(current.year - 1, 12, 1)
@@ -335,8 +389,9 @@ def my_attendance(request, year=None, month=None):
 
     return render(request, 'schedule/my_attendance.html', {
         'current': current,
-        'records': records,
-        'total_days': total_days,
+        'weeks': weeks,
+        'attended_days': attended_days,
+        'by_date': by_date,
         'today': today,
         'prev': prev,
         'next': next_,

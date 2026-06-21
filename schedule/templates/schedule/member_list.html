@@ -1,49 +1,46 @@
 {% extends 'schedule/base.html' %}
-
-{% block title %}회원 목록 - 유도 일정관리{% endblock %}
+{% block title %}회원 목록 - 청림유도관{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="mb-0"><i class="bi bi-people-fill"></i> 회원 목록</h4>
-    <a href="/admin/schedule/member/add/" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-lg"></i> 회원 추가
+    <a href="{% url 'schedule:member_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-lg"></i> 추가
     </a>
 </div>
 
-<div class="card">
-    <div class="card-body p-0">
-        <table class="table table-hover mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th>이름</th>
-                    <th>띠/단</th>
-                    <th>체급</th>
-                    <th>연락처</th>
-                    <th>등록일</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for member in members %}
-                <tr>
-                    <td>
-                        <a href="{% url 'schedule:member_detail' member.pk %}" class="text-decoration-none fw-semibold">
-                            {{ member.name }}
-                        </a>
-                    </td>
-                    <td>
-                        <span class="badge {% if 'black' in member.belt %}bg-dark{% else %}bg-secondary{% endif %}">
+<div class="d-flex flex-column gap-2">
+    {% for member in members %}
+    <a href="{% url 'schedule:member_detail' member.pk %}" class="text-decoration-none">
+        <div class="card">
+            <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white flex-shrink-0"
+                     style="width:42px; height:42px; font-size:1.1rem; background:#1a1a2e;">
+                    {{ member.name|first }}
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold text-dark">{{ member.name }}</div>
+                    <div class="d-flex align-items-center gap-1 mt-1">
+                        <span class="badge {% if 'black' in member.belt %}bg-dark{% else %}bg-secondary{% endif %}" style="font-size:.68rem;">
                             {{ member.get_belt_display }}
                         </span>
-                    </td>
-                    <td>{{ member.get_weight_class_display|default:"-" }}</td>
-                    <td>{{ member.phone|default:"-" }}</td>
-                    <td><small class="text-muted">{{ member.join_date }}</small></td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5" class="text-center text-muted py-4">등록된 회원이 없습니다.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        {% if member.weight_class %}
+                        <span class="text-muted" style="font-size:.75rem;">{{ member.get_weight_class_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <i class="bi bi-chevron-right text-muted"></i>
+            </div>
+        </div>
+    </a>
+    {% empty %}
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-people" style="font-size:2.5rem;"></i>
+            <p class="mt-2 mb-3">등록된 회원이 없습니다.</p>
+            <a href="{% url 'schedule:member_create' %}" class="btn btn-primary btn-sm">회원 등록하기</a>
+        </div>
     </div>
+    {% endfor %}
 </div>
 {% endblock %}

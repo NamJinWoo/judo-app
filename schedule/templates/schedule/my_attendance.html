@@ -1,5 +1,4 @@
 {% extends 'schedule/base.html' %}
-
 {% block title %}내 출석 기록 - 청림유도관{% endblock %}
 
 {% block content %}
@@ -8,7 +7,7 @@
 </div>
 
 <!-- 월 네비게이션 -->
-<div class="d-flex align-items-center justify-content-center gap-3 mb-4">
+<div class="d-flex align-items-center justify-content-center gap-3 mb-3">
     <a href="{% url 'schedule:my_attendance_nav' prev.year prev.month %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-chevron-left"></i>
     </a>
@@ -20,51 +19,96 @@
 </div>
 
 <!-- 요약 카드 -->
-<div class="card mb-4 text-center p-3" style="background: linear-gradient(135deg, #1a1a2e, #2d2d4e); color: white;">
-    <div class="display-4 fw-bold text-warning">{{ total_days }}</div>
-    <div class="mt-1">{{ current|date:"n월" }} 출석일수</div>
-    {% if total_days > 0 %}
-    <div class="text-secondary small mt-1">총 {{ records|length }}일 참석</div>
-    {% endif %}
+<div class="card mb-4" style="background: linear-gradient(135deg, #1a1a2e, #2d2d4e); color: white;">
+    <div class="card-body py-3 text-center">
+        <div class="fw-bold text-warning" style="font-size:2.8rem; line-height:1;">{{ attended_days }}</div>
+        <div class="mt-1" style="color:#adb5bd; font-size:.85rem;">{{ current|date:"n월" }} 출석일수</div>
+    </div>
 </div>
 
-<!-- 출석 기록 리스트 -->
-{% if records %}
-<div class="d-flex flex-column gap-2">
-    {% for rec in records %}
-    <div class="card">
-        <div class="card-body py-2 px-3">
-            <div class="d-flex align-items-center gap-3">
-                <div class="text-center" style="min-width: 52px;">
-                    <div class="text-muted small fw-bold">
-                        {% with wd=rec.date.weekday %}
-                            {% if wd == 0 %}월{% elif wd == 1 %}화{% elif wd == 2 %}수{% elif wd == 3 %}목{% elif wd == 4 %}금{% elif wd == 5 %}<span class="text-primary">토</span>{% else %}<span class="text-danger">일</span>{% endif %}
-                        {% endwith %}
+<!-- 달력 -->
+<div class="card mb-2">
+    <div class="card-body p-3">
+        <!-- 요일 헤더 -->
+        <div class="row g-0 text-center mb-1">
+            {% for name in "월화수목금토일" %}
+            <div class="col fw-bold py-1" style="font-size:.75rem; {% if forloop.counter == 6 or forloop.counter == 7 %}color:#0d6efd;{% else %}color:#adb5bd;{% endif %}">{{ name }}</div>
+            {% endfor %}
+        </div>
+        <!-- 날짜 그리드 -->
+        {% for week in weeks %}
+        <div class="row g-0">
+            {% for day in week %}
+            <div class="col text-center" style="min-height:54px; padding:2px;">
+                {% if day %}
+                <div class="d-flex flex-column align-items-center justify-content-center h-100 rounded"
+                     {% if day.is_today %}style="background:rgba(255,193,7,.15);"{% endif %}>
+                    <div class="fw-semibold" style="font-size:.88rem; {% if day.is_today %}color:#ffc107;{% elif day.is_future %}color:#ced4da;{% elif day.count > 0 %}color:#212529;{% else %}color:#adb5bd;{% endif %}">
+                        {{ day.date.day }}
                     </div>
-                    <div class="fw-bold fs-5">{{ rec.date|date:"j" }}</div>
-                    <div class="text-muted" style="font-size:.7rem;">{{ rec.date|date:"n/j" }}</div>
+                    {% if day.count > 0 %}
+                    <div class="d-flex gap-1 mt-1 justify-content-center flex-wrap">
+                        {% for _ in day.plans %}
+                        <span style="width:7px;height:7px;border-radius:50%;background:#ffc107;display:inline-block;"></span>
+                        {% endfor %}
+                    </div>
+                    {% elif day.is_past and not day.is_today %}
+                    <span style="width:6px;height:6px;border-radius:50%;background:#dee2e6;display:inline-block;margin-top:4px;"></span>
+                    {% endif %}
                 </div>
-                <div class="flex-grow-1">
-                    {% for plan in rec.slots %}
-                    <span class="badge bg-warning text-dark me-1 mb-1">
-                        <i class="bi bi-clock me-1"></i>{{ plan.get_time_slot_display }}
-                    </span>
-                    {% endfor %}
-                </div>
-                <div>
-                    <span class="badge bg-success-subtle text-success" style="font-size:.75rem;">
-                        {{ rec.count }}부
-                    </span>
-                </div>
+                {% endif %}
             </div>
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- 범례 -->
+<div class="d-flex gap-3 small text-muted mb-4 px-1">
+    <span><span style="width:8px;height:8px;border-radius:50%;background:#ffc107;display:inline-block;margin-right:3px;"></span>출석</span>
+    <span><span style="width:8px;height:8px;border-radius:50%;background:#dee2e6;display:inline-block;margin-right:3px;"></span>결석</span>
+</div>
+
+<!-- 출석 상세 리스트 -->
+{% if attended_days > 0 %}
+<h6 class="fw-bold mb-2">출석 상세</h6>
+<div class="d-flex flex-column gap-2">
+    {% for week in weeks %}
+    {% for day in week %}
+    {% if day and day.count > 0 and not day.is_future %}
+    <div class="card">
+        <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+            <div class="text-center" style="min-width:44px;">
+                <div class="small fw-bold text-muted">
+                    {% with wd=day.date.weekday %}
+                    {% if wd == 0 %}월{% elif wd == 1 %}화{% elif wd == 2 %}수{% elif wd == 3 %}목{% elif wd == 4 %}금{% elif wd == 5 %}<span class="text-primary">토</span>{% else %}<span class="text-danger">일</span>{% endif %}
+                    {% endwith %}
+                </div>
+                <div class="fw-bold fs-5 {% if day.is_today %}text-warning{% endif %}">{{ day.date.day }}</div>
+            </div>
+            <div class="flex-grow-1">
+                {% for plan in day.plans %}
+                <span class="badge bg-warning text-dark me-1 mb-1" style="font-size:.75rem;">
+                    <i class="bi bi-clock me-1"></i>{{ plan.get_time_slot_display }}
+                </span>
+                {% endfor %}
+            </div>
+            <span class="badge bg-success-subtle text-success">{{ day.count }}부</span>
         </div>
     </div>
+    {% endif %}
+    {% endfor %}
     {% endfor %}
 </div>
 {% else %}
-<div class="text-center text-muted py-5">
-    <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
-    <p class="mt-3">{{ current|date:"n월" }}에는 출석 기록이 없어요.</p>
+<div class="card">
+    <div class="card-body text-center text-muted py-5">
+        <i class="bi bi-calendar-x" style="font-size:2.5rem;"></i>
+        <p class="mt-2 mb-3 small">{{ current|date:"n월" }}에는 출석 기록이 없어요.</p>
+        <a href="{% url 'schedule:attendance_week' %}" class="btn btn-outline-primary btn-sm">출석 등록하러 가기</a>
+    </div>
 </div>
 {% endif %}
+
 {% endblock %}
