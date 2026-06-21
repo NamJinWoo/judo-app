@@ -1,0 +1,164 @@
+{% extends 'schedule/base.html' %}
+{% block title %}사용자 관리 - 청림유도관{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0"><i class="bi bi-person-gear"></i> 사용자 관리</h4>
+    <span class="badge bg-secondary">{{ users|length }}명</span>
+</div>
+
+<div class="d-flex flex-column gap-2">
+    {% for user in users %}
+    <div class="card" id="user-card-{{ user.pk }}">
+        <div class="card-body py-3 px-3">
+            <div class="d-flex align-items-center gap-3">
+                <!-- 아바타 -->
+                <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                     style="width:44px; height:44px; font-size:1.1rem;
+                            background: {% if user.is_staff %}#ffc107{% else %}#1a1a2e{% endif %};
+                            color: {% if user.is_staff %}#212529{% else %}white{% endif %};"
+                     id="avatar-{{ user.pk }}">
+                    {{ user.first_name|default:user.username|first }}
+                </div>
+                <!-- 정보 -->
+                <div class="flex-grow-1 min-width-0">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span class="fw-semibold">{{ user.first_name|default:user.username }}</span>
+                        <span class="badge" id="role-badge-{{ user.pk }}"
+                              style="{% if user.is_staff %}background:#ffc107; color:#212529;{% else %}background:#6c757d; color:white;{% endif %}">
+                            {% if user.is_staff %}관장{% else %}관원{% endif %}
+                        </span>
+                        <span class="badge" id="active-badge-{{ user.pk }}"
+                              style="{% if not user.is_active %}background:#dc3545; color:white;{% else %}display:none;{% endif %}">
+                            비활성
+                        </span>
+                    </div>
+                    <div class="text-muted mt-1" style="font-size:.78rem;">
+                        {% if user.profile.belt %}{{ user.profile.get_belt_display }}{% else %}띠 미설정{% endif %}
+                        &nbsp;·&nbsp; 가입 {{ user.date_joined|date:"Y.n.j" }}
+                    </div>
+                </div>
+                <!-- 액션 버튼 -->
+                {% if user != request.user %}
+                <div class="d-flex flex-column gap-1 align-items-end flex-shrink-0">
+                    <button class="btn btn-sm role-toggle-btn"
+                            id="role-btn-{{ user.pk }}"
+                            data-user-id="{{ user.pk }}"
+                            data-is-staff="{{ user.is_staff|lower }}"
+                            style="font-size:.72rem; min-width:72px;
+                                   {% if user.is_staff %}border-color:#6c757d; color:#6c757d;{% else %}border-color:#ffc107; color:#ffc107;{% endif %}
+                                   background:transparent; border:1px solid; border-radius:6px; padding:3px 8px;">
+                        {% if user.is_staff %}관원으로{% else %}관장으로{% endif %}
+                    </button>
+                    <button class="btn btn-sm active-toggle-btn"
+                            id="active-btn-{{ user.pk }}"
+                            data-user-id="{{ user.pk }}"
+                            data-is-active="{{ user.is_active|lower }}"
+                            style="font-size:.72rem; min-width:72px;
+                                   {% if user.is_active %}border-color:#dc3545; color:#dc3545;{% else %}border-color:#198754; color:#198754;{% endif %}
+                                   background:transparent; border:1px solid; border-radius:6px; padding:3px 8px;">
+                        {% if user.is_active %}비활성화{% else %}활성화{% endif %}
+                    </button>
+                </div>
+                {% else %}
+                <span class="text-muted small flex-shrink-0">나</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="card">
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-people" style="font-size:2rem;"></i>
+            <p class="mt-2 mb-0">등록된 사용자가 없습니다.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- 안내 -->
+<div class="mt-4 p-3 rounded" style="background:#f8f9fa; font-size:.8rem; color:#6c757d;">
+    <i class="bi bi-info-circle me-1"></i>
+    <strong>관장</strong>은 회원 관리, 출석 확인, 일정 등록/수정 권한을 가집니다.
+    자기 자신의 권한은 변경할 수 없습니다.
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const csrfToken = '{{ csrf_token }}';
+
+document.querySelectorAll('.role-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const userId = btn.dataset.userId;
+        btn.disabled = true;
+
+        const res = await fetch(`/users/${userId}/toggle-staff/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrfToken},
+        });
+        const data = await res.json();
+        if (!res.ok) { btn.disabled = false; return; }
+
+        const isStaff = data.is_staff;
+
+        // 배지 업데이트
+        const badge = document.getElementById(`role-badge-${userId}`);
+        badge.textContent = isStaff ? '관장' : '관원';
+        badge.style.cssText = isStaff
+            ? 'background:#ffc107; color:#212529;'
+            : 'background:#6c757d; color:white;';
+
+        // 아바타 색상
+        const avatar = document.getElementById(`avatar-${userId}`);
+        avatar.style.background = isStaff ? '#ffc107' : '#1a1a2e';
+        avatar.style.color = isStaff ? '#212529' : 'white';
+
+        // 버튼 업데이트
+        btn.textContent = isStaff ? '관원으로' : '관장으로';
+        btn.style.cssText = isStaff
+            ? 'font-size:.72rem; min-width:72px; border-color:#6c757d; color:#6c757d; background:transparent; border:1px solid; border-radius:6px; padding:3px 8px;'
+            : 'font-size:.72rem; min-width:72px; border-color:#ffc107; color:#ffc107; background:transparent; border:1px solid; border-radius:6px; padding:3px 8px;';
+        btn.dataset.isStaff = isStaff;
+        btn.disabled = false;
+    });
+});
+
+document.querySelectorAll('.active-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const userId = btn.dataset.userId;
+        btn.disabled = true;
+
+        const res = await fetch(`/users/${userId}/toggle-active/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': csrfToken},
+        });
+        const data = await res.json();
+        if (!res.ok) { btn.disabled = false; return; }
+
+        const isActive = data.is_active;
+
+        // 비활성 배지
+        const activeBadge = document.getElementById(`active-badge-${userId}`);
+        if (isActive) {
+            activeBadge.style.display = 'none';
+        } else {
+            activeBadge.style.cssText = 'background:#dc3545; color:white;';
+            activeBadge.style.display = '';
+        }
+
+        // 카드 opacity
+        const card = document.getElementById(`user-card-${userId}`);
+        card.style.opacity = isActive ? '1' : '0.55';
+
+        // 버튼 업데이트
+        btn.textContent = isActive ? '비활성화' : '활성화';
+        btn.style.cssText = isActive
+            ? 'font-size:.72rem; min-width:72px; border-color:#dc3545; color:#dc3545; background:transparent; border:1px solid; border-radius:6px; padding:3px 8px;'
+            : 'font-size:.72rem; min-width:72px; border-color:#198754; color:#198754; background:transparent; border:1px solid; border-radius:6px; padding:3px 8px;';
+        btn.dataset.isActive = isActive;
+        btn.disabled = false;
+    });
+});
+</script>
+{% endblock %}

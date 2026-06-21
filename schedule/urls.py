@@ -42,6 +42,10 @@ urlpatterns = [
     path('competitions/create/', views.competition_create, name='competition_create'),
     path('competitions/<int:pk>/edit/', views.competition_edit, name='competition_edit'),
     path('competitions/<int:pk>/delete/', views.competition_delete, name='competition_delete'),
+    # 사용자 관리
+    path('users/', views.user_list, name='user_list'),
+    path('users/<int:user_id>/toggle-staff/', views.user_toggle_staff, name='user_toggle_staff'),
+    path('users/<int:user_id>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
     # 출석 확인 (관장용)
     path('attendance/confirm/', views.attendance_confirm, name='attendance_confirm'),
     path('attendance/confirm/<str:target_date_str>/', views.attendance_confirm, name='attendance_confirm_date'),

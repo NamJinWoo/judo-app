@@ -70,30 +70,11 @@
                         <i class="bi bi-house-fill"></i> 홈
                     </a>
                 </li>
-                {% if request.user.is_staff %}
                 <li class="nav-item">
-                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'schedule:dashboard' %}">
-                        <i class="bi bi-speedometer2"></i> 대시보드
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'member' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'schedule:member_list' %}">
-                        <i class="bi bi-people-fill"></i> 회원 관리
-                    </a>
-                </li>
-                {% endif %}
-                <li class="nav-item">
-                    <a class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'schedule:attendance_week' %}">
+                    <a class="nav-link {% if 'attendance' in request.resolver_match.url_name and 'confirm' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'schedule:attendance_week' %}">
                         <i class="bi bi-person-check-fill"></i> 출석 예정
                     </a>
                 </li>
-                {% if request.user.is_staff %}
-                <li class="nav-item">
-                    <a class="nav-link {% if 'confirm' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'schedule:attendance_confirm' %}">
-                        <i class="bi bi-clipboard2-check-fill"></i> 출석 확인
-                    </a>
-                </li>
-                {% endif %}
                 <li class="nav-item">
                     <a class="nav-link {% if 'announcement' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'schedule:announcement_list' %}">
                         <i class="bi bi-megaphone-fill"></i> 공지사항
@@ -109,6 +90,33 @@
                         <i class="bi bi-trophy-fill"></i> 대회 일정
                     </a>
                 </li>
+
+                {% if request.user.is_staff %}
+                <li class="nav-item mt-3">
+                    <div class="px-3 mb-1" style="font-size:.7rem; font-weight:700; letter-spacing:.08em; color:#adb5bd; text-transform:uppercase;">관리</div>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'schedule:dashboard' %}">
+                        <i class="bi bi-speedometer2"></i> 대시보드
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'member' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'schedule:member_list' %}">
+                        <i class="bi bi-people-fill"></i> 회원 관리
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'confirm' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'schedule:attendance_confirm' %}">
+                        <i class="bi bi-clipboard2-check-fill"></i> 출석 확인
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}" href="{% url 'schedule:user_list' %}">
+                        <i class="bi bi-person-gear"></i> 사용자 관리
+                    </a>
+                </li>
+                {% endif %}
+
                 <li class="nav-item mt-2">
                     <a class="nav-link text-muted" href="{% url 'accounts:logout' %}">
                         <i class="bi bi-box-arrow-right"></i> 로그아웃

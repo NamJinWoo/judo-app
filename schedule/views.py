@@ -4,11 +4,13 @@ from datetime import date, timedelta
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 from .models import Member, TrainingSession, Competition, AttendancePlan, Announcement, Notification
 from .forms import TrainingForm, CompetitionForm, AnnouncementForm, MemberForm
+from accounts.models import UserProfile
 from accounts.models import UserProfile
 
 
@@ -630,3 +632,37 @@ def attendance_batch(request):
             results.append({'date': date_str, 'attending': False})
 
     return JsonResponse({'results': results})
+
+
+# ── 사용자 관리 ───────────────────────────────────────
+
+@staff_member_required
+def user_list(request):
+    users = User.objects.all().order_by('-date_joined')
+    # 프로필이 없는 유저는 생성
+    for u in users:
+        UserProfile.objects.get_or_create(user=u)
+    users = User.objects.all().select_related('profile').order_by('-date_joined')
+    return render(request, 'schedule/user_list.html', {'users': users})
+
+
+@staff_member_required
+@require_POST
+def user_toggle_staff(request, user_id):
+    target = get_object_or_404(User, pk=user_id)
+    if target == request.user:
+        return JsonResponse({'error': '자기 자신의 권한은 변경할 수 없습니다.'}, status=400)
+    target.is_staff = not target.is_staff
+    target.save()
+    return JsonResponse({'is_staff': target.is_staff})
+
+
+@staff_member_required
+@require_POST
+def user_toggle_active(request, user_id):
+    target = get_object_or_404(User, pk=user_id)
+    if target == request.user:
+        return JsonResponse({'error': '자기 자신의 상태는 변경할 수 없습니다.'}, status=400)
+    target.is_active = not target.is_active
+    target.save()
+    return JsonResponse({'is_active': target.is_active})
