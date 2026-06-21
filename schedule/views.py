@@ -1,6 +1,8 @@
 import calendar
 import json
+import os
 from datetime import date, timedelta
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
@@ -702,7 +704,6 @@ self.addEventListener('activate', e => e.waitUntil(clients.claim()));
 
 @cache_control(max_age=86400)
 def pwa_icon(request, size):
-    import os
     icon_path = os.path.join(settings.BASE_DIR, 'schedule', 'static', 'icons', f'icon-{size}.png')
     with open(icon_path, 'rb') as f:
         return HttpResponse(f.read(), content_type='image/png')
