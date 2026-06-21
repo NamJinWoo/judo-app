@@ -52,6 +52,99 @@
     </a>
 </div>
 
+<!-- 회비 납부 현황 -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="fw-bold mb-0"><i class="bi bi-cash-coin text-warning"></i> 최근 6개월 회비</h6>
+    {% if request.user.is_staff %}
+    <a href="{% url 'schedule:fee_list' %}" class="btn btn-outline-secondary btn-sm" style="font-size:.75rem;">전체 관리</a>
+    {% endif %}
+</div>
+<div class="card mb-4">
+    <div class="card-body py-2 px-3">
+        <div class="d-flex gap-2 justify-content-between">
+            {% for fm in fee_months %}
+            <div class="text-center flex-grow-1">
+                <div style="font-size:.68rem; color:#adb5bd;">{{ fm.month }}월</div>
+                {% if fm.paid %}
+                <i class="bi bi-check-circle-fill text-success" style="font-size:1.2rem;"></i>
+                {% else %}
+                <i class="bi bi-x-circle-fill text-danger" style="font-size:1.2rem; opacity:.4;"></i>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 띠 승급 이력 -->
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="fw-bold mb-0"><i class="bi bi-arrow-up-circle-fill text-primary"></i> 띠 승급 이력</h6>
+</div>
+
+{% if promotions %}
+<div class="d-flex flex-column gap-2 mb-3">
+    {% for p in promotions %}
+    <div class="card">
+        <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+            <div class="text-center" style="min-width:40px;">
+                <div class="fw-bold" style="font-size:.8rem;">{{ p.promoted_at|date:"Y" }}</div>
+                <div class="text-muted" style="font-size:.68rem;">{{ p.promoted_at|date:"m.d" }}</div>
+            </div>
+            <div class="flex-grow-1">
+                <span class="badge {% if 'black' in p.belt %}bg-dark{% else %}bg-secondary{% endif %}">
+                    {{ p.get_belt_display }}
+                </span>
+                {% if p.note %}<div class="text-muted small mt-1">{{ p.note }}</div>{% endif %}
+            </div>
+            {% if request.user.is_staff %}
+            <form method="post" action="{% url 'schedule:belt_promotion_delete' p.pk %}"
+                  onsubmit="return confirm('삭제할까요?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size:.7rem; padding:2px 6px;">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card mb-3">
+    <div class="card-body text-center text-muted py-2 small">승급 기록 없음</div>
+</div>
+{% endif %}
+
+{% if request.user.is_staff %}
+<div class="card mb-4">
+    <div class="card-body p-3">
+        <div class="small fw-semibold mb-2 text-muted">승급 기록 추가</div>
+        <form method="post" action="{% url 'schedule:belt_promote' member.pk %}">
+            {% csrf_token %}
+            <div class="row g-2">
+                <div class="col-5">
+                    <select name="belt" class="form-select form-select-sm" required>
+                        <option value="">띠 선택</option>
+                        {% for val, label in belt_choices %}
+                        <option value="{{ val }}" {% if val == member.belt %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-4">
+                    <input type="date" name="promoted_at" class="form-control form-control-sm" value="{{ today }}" required>
+                </div>
+                <div class="col-3">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">추가</button>
+                </div>
+                <div class="col-12">
+                    <input type="text" name="note" class="form-control form-control-sm" placeholder="메모 (선택)">
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <!-- 대회 결과 -->
 <div class="d-flex justify-content-between align-items-center mb-2">
     <h6 class="fw-bold mb-0"><i class="bi bi-trophy-fill text-warning"></i> 대회 결과</h6>

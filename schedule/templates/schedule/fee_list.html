@@ -1,0 +1,112 @@
+{% extends 'schedule/base.html' %}
+{% block title %}회비 관리 - 청림유도관{% endblock %}
+
+{% block content %}
+
+<div class="card mb-4" style="background: linear-gradient(135deg, #1a1a2e, #2d2d4e); color: white;">
+    <div class="card-body p-4">
+        <div class="small mb-3" style="color:#adb5bd;"><i class="bi bi-cash-coin me-1"></i> 월별 회비 납부 현황</div>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <a href="?year={{ prev_year }}&month={{ prev_month }}" class="btn btn-sm btn-outline-light">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <div class="fw-bold fs-5">{{ year }}년 {{ month }}월{% if is_current %} <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">이번 달</span>{% endif %}</div>
+            <a href="?year={{ next_year }}&month={{ next_month }}" class="btn btn-sm btn-outline-light">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+        <div class="row g-0 text-center">
+            <div class="col-6">
+                <div class="fw-bold text-warning" style="font-size:2rem;">{{ paid_count }}</div>
+                <div style="font-size:.75rem; color:#adb5bd;">납부 완료</div>
+            </div>
+            <div class="col-6 border-start" style="border-color:rgba(255,255,255,.1) !important;">
+                <div class="fw-bold text-danger" style="font-size:2rem;">{{ unpaid_count }}</div>
+                <div style="font-size:.75rem; color:#adb5bd;">미납</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if member_data %}
+<div class="d-flex flex-column gap-2">
+    {% for d in member_data %}
+    <div class="card" id="fee-row-{{ d.member.pk }}">
+        <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                 style="width:38px; height:38px; font-size:.9rem;
+                        background:{% if d.payment and d.payment.paid %}#198754{% else %}#1a1a2e{% endif %};
+                        color:{% if d.payment and d.payment.paid %}white{% else %}#adb5bd{% endif %};">
+                {{ d.member.name|first }}
+            </div>
+            <div class="flex-grow-1">
+                <div class="fw-semibold">{{ d.member.name }}</div>
+                <div style="font-size:.78rem; color:#adb5bd;">{{ d.member.get_belt_display }}</div>
+            </div>
+            {% if d.payment and d.payment.paid %}
+            <div class="text-end me-1">
+                <span class="badge bg-success fee-badge" data-pk="{{ d.member.pk }}">납부</span>
+                {% if d.payment.paid_at %}
+                <div style="font-size:.68rem; color:#adb5bd;">{{ d.payment.paid_at }}</div>
+                {% endif %}
+            </div>
+            {% else %}
+            <span class="badge bg-danger fee-badge" data-pk="{{ d.member.pk }}">미납</span>
+            {% endif %}
+            <button class="btn btn-sm btn-outline-secondary fee-toggle-btn"
+                    data-pk="{{ d.member.pk }}"
+                    data-year="{{ year }}"
+                    data-month="{{ month }}"
+                    data-paid="{% if d.payment and d.payment.paid %}1{% else %}0{% endif %}">
+                {% if d.payment and d.payment.paid %}취소{% else %}납부처리{% endif %}
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center text-muted py-4">활성 회원이 없습니다.</div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.fee-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const pk = this.dataset.pk;
+        const year = this.dataset.year;
+        const month = this.dataset.month;
+        const wasPaid = this.dataset.paid === '1';
+
+        fetch(`/fees/${pk}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `year=${year}&month=${month}`,
+        })
+        .then(r => r.json())
+        .then(data => {
+            const isPaid = data.paid;
+            const badge = document.querySelector(`.fee-badge[data-pk="${pk}"]`);
+            const row = document.getElementById(`fee-row-${pk}`);
+            const avatar = row.querySelector('.rounded-circle');
+
+            badge.textContent = isPaid ? '납부' : '미납';
+            badge.className = `badge ${isPaid ? 'bg-success' : 'bg-danger'} fee-badge`;
+            badge.dataset.pk = pk;
+
+            avatar.style.background = isPaid ? '#198754' : '#1a1a2e';
+            avatar.style.color = isPaid ? 'white' : '#adb5bd';
+
+            this.textContent = isPaid ? '취소' : '납부처리';
+            this.dataset.paid = isPaid ? '1' : '0';
+        });
+    });
+});
+</script>
+{% endblock %}

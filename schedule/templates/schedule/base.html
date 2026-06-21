@@ -118,6 +118,11 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {% if 'fee' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'schedule:fee_list' %}">
+                        <i class="bi bi-cash-coin"></i> 회비 관리
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'user_list' %}active{% endif %}" href="{% url 'schedule:user_list' %}">
                         <i class="bi bi-person-gear"></i> 사용자 관리
                     </a>

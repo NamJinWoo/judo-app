@@ -11,7 +11,7 @@ from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_POST
-from .models import Member, TrainingSession, Competition, AttendancePlan, Announcement, Notification
+from .models import Member, TrainingSession, Competition, AttendancePlan, Announcement, Notification, FeePayment, BeltPromotion
 from .forms import TrainingForm, CompetitionForm, AnnouncementForm, MemberForm
 from accounts.models import UserProfile
 from accounts.models import UserProfile
@@ -96,6 +96,11 @@ def dashboard(request):
 
     announcements = Announcement.objects.all()[:5]
 
+    paid_ids = FeePayment.objects.filter(
+        year=today.year, month=today.month, paid=True
+    ).values_list('member_id', flat=True)
+    unpaid_count = Member.objects.filter(is_active=True).exclude(pk__in=paid_ids).count()
+
     return render(request, 'schedule/dashboard.html', {
         'upcoming_trainings': upcoming_trainings,
         'upcoming_competitions': upcoming_competitions,
@@ -105,6 +110,7 @@ def dashboard(request):
         'monday': monday,
         'sunday': sunday,
         'announcements': announcements,
+        'unpaid_count': unpaid_count,
     })
 
 
@@ -149,12 +155,29 @@ def member_detail(request, pk):
     this_month_trainings = member.trainings.filter(
         date__year=today.year, date__month=today.month
     ).count()
+
+    # 최근 6개월 회비 납부 현황
+    fee_months = []
+    y, m = today.year, today.month
+    for _ in range(6):
+        payment = FeePayment.objects.filter(member=member, year=y, month=m).first()
+        fee_months.append({'year': y, 'month': m, 'paid': payment.paid if payment else False})
+        m -= 1
+        if m == 0:
+            m, y = 12, y - 1
+    fee_months.reverse()
+
+    promotions = member.belt_promotions.all()
+
     return render(request, 'schedule/member_detail.html', {
         'member': member,
         'recent_trainings': recent_trainings,
         'competition_results': competition_results,
         'this_month_trainings': this_month_trainings,
         'today': today,
+        'fee_months': fee_months,
+        'promotions': promotions,
+        'belt_choices': Member.BELT_CHOICES,
     })
 
 
@@ -669,6 +692,80 @@ def user_toggle_active(request, user_id):
     target.is_active = not target.is_active
     target.save()
     return JsonResponse({'is_active': target.is_active})
+
+
+# ── 회비 납부 관리 ─────────────────────────────────────
+
+@staff_member_required
+def fee_list(request):
+    today = timezone.now().date()
+    year = int(request.GET.get('year', today.year))
+    month = int(request.GET.get('month', today.month))
+
+    members = Member.objects.filter(is_active=True).order_by('name')
+    payments = {p.member_id: p for p in FeePayment.objects.filter(year=year, month=month)}
+
+    member_data = [
+        {'member': m, 'payment': payments.get(m.pk)}
+        for m in members
+    ]
+    paid_count = sum(1 for d in member_data if d['payment'] and d['payment'].paid)
+
+    prev_month, prev_year = (month - 1, year) if month > 1 else (12, year - 1)
+    next_month, next_year = (month + 1, year) if month < 12 else (1, year + 1)
+
+    return render(request, 'schedule/fee_list.html', {
+        'year': year, 'month': month,
+        'member_data': member_data,
+        'paid_count': paid_count,
+        'unpaid_count': len(member_data) - paid_count,
+        'prev_year': prev_year, 'prev_month': prev_month,
+        'next_year': next_year, 'next_month': next_month,
+        'is_current': (year == today.year and month == today.month),
+    })
+
+
+@staff_member_required
+@require_POST
+def fee_toggle(request, member_pk):
+    member = get_object_or_404(Member, pk=member_pk)
+    year = int(request.POST.get('year'))
+    month = int(request.POST.get('month'))
+    today = timezone.now().date()
+
+    payment, _ = FeePayment.objects.get_or_create(member=member, year=year, month=month)
+    payment.paid = not payment.paid
+    payment.paid_at = today if payment.paid else None
+    payment.save()
+    return JsonResponse({'paid': payment.paid})
+
+
+# ── 띠 승급 이력 ────────────────────────────────────────
+
+@staff_member_required
+@require_POST
+def belt_promote(request, member_pk):
+    member = get_object_or_404(Member, pk=member_pk)
+    belt = request.POST.get('belt')
+    promoted_at = request.POST.get('promoted_at')
+    note = request.POST.get('note', '')
+    if belt and promoted_at:
+        BeltPromotion.objects.create(member=member, belt=belt, promoted_at=promoted_at, note=note)
+        member.belt = belt
+        member.save()
+    return redirect('schedule:member_detail', pk=member_pk)
+
+
+@staff_member_required
+@require_POST
+def belt_promotion_delete(request, pk):
+    promotion = get_object_or_404(BeltPromotion, pk=pk)
+    member_pk = promotion.member_id
+    promotion.delete()
+    latest = BeltPromotion.objects.filter(member_id=member_pk).first()
+    if latest:
+        Member.objects.filter(pk=member_pk).update(belt=latest.belt)
+    return redirect('schedule:member_detail', pk=member_pk)
 
 
 # ── PWA ──────────────────────────────────────────────

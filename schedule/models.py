@@ -154,6 +154,39 @@ class Announcement(models.Model):
         return self.title
 
 
+class FeePayment(models.Model):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='fee_payments', verbose_name='회원')
+    year = models.IntegerField('연도')
+    month = models.IntegerField('월')
+    paid = models.BooleanField('납부 여부', default=False)
+    paid_at = models.DateField('납부일', null=True, blank=True)
+    note = models.CharField('메모', max_length=100, blank=True)
+
+    class Meta:
+        verbose_name = '회비 납부'
+        verbose_name_plural = '회비 납부 목록'
+        unique_together = ['member', 'year', 'month']
+        ordering = ['-year', '-month']
+
+    def __str__(self):
+        return f'{self.member.name} {self.year}.{self.month:02d} {"납부" if self.paid else "미납"}'
+
+
+class BeltPromotion(models.Model):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='belt_promotions', verbose_name='회원')
+    belt = models.CharField('승급 띠/단', max_length=20, choices=Member.BELT_CHOICES)
+    promoted_at = models.DateField('승급일')
+    note = models.CharField('메모', max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = '띠 승급 이력'
+        verbose_name_plural = '띠 승급 이력 목록'
+        ordering = ['-promoted_at']
+
+    def __str__(self):
+        return f'{self.member.name} → {self.get_belt_display()} ({self.promoted_at})'
+
+
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     message = models.CharField('메시지', max_length=300)

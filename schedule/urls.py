@@ -42,6 +42,12 @@ urlpatterns = [
     path('competitions/create/', views.competition_create, name='competition_create'),
     path('competitions/<int:pk>/edit/', views.competition_edit, name='competition_edit'),
     path('competitions/<int:pk>/delete/', views.competition_delete, name='competition_delete'),
+    # 회비 납부 관리
+    path('fees/', views.fee_list, name='fee_list'),
+    path('fees/<int:member_pk>/toggle/', views.fee_toggle, name='fee_toggle'),
+    # 띠 승급 이력
+    path('members/<int:member_pk>/promote/', views.belt_promote, name='belt_promote'),
+    path('promotions/<int:pk>/delete/', views.belt_promotion_delete, name='belt_promotion_delete'),
     # 사용자 관리
     path('users/', views.user_list, name='user_list'),
     path('users/<int:user_id>/toggle-staff/', views.user_toggle_staff, name='user_toggle_staff'),
