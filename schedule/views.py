@@ -5,8 +5,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.models import User
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
+from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_POST
 from .models import Member, TrainingSession, Competition, AttendancePlan, Announcement, Notification
 from .forms import TrainingForm, CompetitionForm, AnnouncementForm, MemberForm
@@ -666,3 +667,34 @@ def user_toggle_active(request, user_id):
     target.is_active = not target.is_active
     target.save()
     return JsonResponse({'is_active': target.is_active})
+
+
+# ── PWA ──────────────────────────────────────────────
+
+@cache_control(max_age=86400)
+def manifest(request):
+    data = {
+        "name": "청림유도관",
+        "short_name": "청림유도관",
+        "description": "청림유도관 출석 및 일정 관리",
+        "start_url": "/",
+        "scope": "/",
+        "display": "standalone",
+        "orientation": "portrait-primary",
+        "background_color": "#1a1a2e",
+        "theme_color": "#1a1a2e",
+        "icons": [
+            {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+        ],
+    }
+    return JsonResponse(data, content_type='application/manifest+json')
+
+
+@cache_control(max_age=86400)
+def service_worker(request):
+    sw = """
+self.addEventListener('install', e => self.skipWaiting());
+self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+"""
+    return HttpResponse(sw, content_type='application/javascript')
