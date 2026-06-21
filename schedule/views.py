@@ -684,8 +684,8 @@ def manifest(request):
         "background_color": "#1a1a2e",
         "theme_color": "#1a1a2e",
         "icons": [
-            {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-            {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+            {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+            {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
         ],
     }
     return JsonResponse(data, content_type='application/manifest+json')
@@ -698,3 +698,11 @@ self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(clients.claim()));
 """
     return HttpResponse(sw, content_type='application/javascript')
+
+
+@cache_control(max_age=86400)
+def pwa_icon(request, size):
+    import os
+    icon_path = os.path.join(settings.BASE_DIR, 'schedule', 'static', 'icons', f'icon-{size}.png')
+    with open(icon_path, 'rb') as f:
+        return HttpResponse(f.read(), content_type='image/png')

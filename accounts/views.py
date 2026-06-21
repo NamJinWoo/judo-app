@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.http import HttpResponse
 from .forms import RegisterForm
 from .models import UserProfile
 
@@ -10,11 +11,14 @@ def login_view(request):
     if request.method == 'POST':
         name = request.POST.get('name', '').strip()
         password = request.POST.get('password', '')
+        standalone = request.POST.get('standalone') == '1'
         user = authenticate(request, username=name, password=password)
         if user is None:
             error = '이름 또는 비밀번호가 올바르지 않습니다.'
         else:
             login(request, user)
+            if standalone:
+                return HttpResponse('<script>window.location.replace("/")</script>')
             return redirect('schedule:home')
     return render(request, 'accounts/login.html', {'error': error})
 
