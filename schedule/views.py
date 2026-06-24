@@ -46,12 +46,19 @@ def home(request):
     ).values('date').distinct().count()
 
     announcements = Announcement.objects.all()[:3]
+    belt_order = [b[0] for b in Member.BELT_CHOICES]
+    coaches = sorted(
+        User.objects.filter(is_staff=True, is_active=True, is_superuser=False).select_related('profile'),
+        key=lambda u: belt_order.index(u.profile.belt) if hasattr(u, 'profile') and u.profile.belt in belt_order else -1,
+        reverse=True,
+    )
 
     return render(request, 'schedule/home.html', {
         'today': today,
         'upcoming': upcoming,
         'announcements': announcements,
         'this_month_days': this_month_days,
+        'coaches': coaches,
     })
 
 

@@ -107,4 +107,13 @@
 </div>
 {% endif %}
 
+{% if coaches %}
+<div class="text-center mt-4 mb-2" style="color:#adb5bd; font-size:.78rem;">
+    관장&nbsp;
+    {% for coach in coaches %}
+    <span class="fw-medium" style="color:#6c757d;">{{ coach.first_name|default:coach.username }}</span>{% if not forloop.last %} &nbsp;·&nbsp; {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
 {% endblock %}
