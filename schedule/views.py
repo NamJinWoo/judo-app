@@ -76,7 +76,7 @@ def dashboard(request):
     for i, day in enumerate(week_days):
         day_plans = [p for p in week_plans if p.date == day]
         slots = []
-        for slot_code, slot_label in AttendancePlan.TIME_SLOT_CHOICES:
+        for slot_code, slot_label in AttendancePlan.get_slots_for_date(day):
             sp = [p for p in day_plans if p.time_slot == slot_code]
             slots.append({
                 'code': slot_code,
@@ -241,7 +241,7 @@ def attendance_week(request, year=None, week=None):
             day_plans = plans_by_date.get(day, [])
             slots = []
             slots_json_data = {}
-            for slot_code, slot_label in AttendancePlan.TIME_SLOT_CHOICES:
+            for slot_code, slot_label in AttendancePlan.get_slots_for_date(day):
                 sp = [p for p in day_plans if p.time_slot == slot_code]
                 names = [p.user.first_name or p.user.username for p in sp]
                 user_att = any(p.user_id == request.user.id for p in sp)
@@ -285,7 +285,7 @@ def attendance_week(request, year=None, week=None):
     # 오늘 출석 현황
     today_plans = AttendancePlan.objects.filter(date=today).select_related('user')
     today_slots = []
-    for slot_code, slot_label in AttendancePlan.TIME_SLOT_CHOICES:
+    for slot_code, slot_label in AttendancePlan.get_slots_for_date(today):
         sp = [p for p in today_plans if p.time_slot == slot_code]
         if sp:
             today_slots.append({
@@ -432,7 +432,7 @@ def attendance_toggle(request):
     date_str = request.POST.get('date', '')
     time_slot = request.POST.get('time_slot', '')
 
-    valid_slots = [s[0] for s in AttendancePlan.TIME_SLOT_CHOICES]
+    valid_slots = [s[0] for s in AttendancePlan.get_slots_for_date(target_date)]
     if time_slot not in valid_slots:
         return JsonResponse({'error': '유효하지 않은 시간대입니다.'}, status=400)
 
@@ -589,7 +589,7 @@ def attendance_confirm(request, target_date_str=None):
 
     plans = AttendancePlan.objects.filter(date=target_date).select_related('user').order_by('time_slot')
     slots = []
-    for slot_code, slot_label in AttendancePlan.TIME_SLOT_CHOICES:
+    for slot_code, slot_label in AttendancePlan.get_slots_for_date(target_date):
         sp = [p for p in plans if p.time_slot == slot_code]
         slots.append({'code': slot_code, 'label': slot_label, 'plans': sp})
 
@@ -615,21 +615,55 @@ def attendance_confirm_toggle(request):
 @login_required
 def my_profile_edit(request):
     from accounts.models import UserProfile
-    from accounts.forms import RegistrationForm
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
     belt_choices = UserProfile._meta.get_field('belt').choices
+    errors = {}
 
     if request.method == 'POST':
+        new_name = request.POST.get('name', '').strip()
         belt = request.POST.get('belt', '')
+        current_pw = request.POST.get('current_password', '')
+        new_pw1 = request.POST.get('new_password1', '')
+        new_pw2 = request.POST.get('new_password2', '')
         valid_belts = [c[0] for c in belt_choices]
-        if belt in valid_belts:
+        changing_password = bool(current_pw or new_pw1 or new_pw2)
+
+        if not new_name:
+            errors['name'] = '이름을 입력해 주세요.'
+        elif User.objects.filter(username=new_name).exclude(pk=request.user.pk).exists():
+            errors['name'] = '이미 사용 중인 이름입니다.'
+
+        if belt not in valid_belts:
+            errors['belt'] = '올바른 띠를 선택해 주세요.'
+
+        if changing_password:
+            if not request.user.check_password(current_pw):
+                errors['current_password'] = '현재 비밀번호가 올바르지 않습니다.'
+            elif not new_pw1:
+                errors['new_password1'] = '새 비밀번호를 입력해 주세요.'
+            elif len(new_pw1) < 4:
+                errors['new_password1'] = '비밀번호는 4자 이상이어야 합니다.'
+            elif new_pw1 != new_pw2:
+                errors['new_password2'] = '새 비밀번호가 일치하지 않습니다.'
+
+        if not errors:
+            request.user.username = new_name
+            request.user.first_name = new_name
+            if changing_password:
+                request.user.set_password(new_pw1)
+            request.user.save()
             profile.belt = belt
             profile.save()
+            if changing_password:
+                from django.contrib.auth import update_session_auth_hash
+                update_session_auth_hash(request, request.user)
             return redirect('schedule:my_attendance')
 
     return render(request, 'schedule/my_profile_edit.html', {
         'profile': profile,
         'belt_choices': belt_choices,
+        'errors': errors,
+        'current_name': request.user.first_name or request.user.username,
     })
 
 

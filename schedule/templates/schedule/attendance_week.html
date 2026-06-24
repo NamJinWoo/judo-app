@@ -308,9 +308,7 @@ document.querySelectorAll('.day-card').forEach(card => {
 
 function renderModalBody() {
     const body = document.getElementById('slotModalBody');
-    const slotOrder = ['18:00', '19:30', '21:00'];
-    body.innerHTML = slotOrder.map(code => {
-        const slot = currentSlots[code];
+    body.innerHTML = Object.entries(currentSlots).map(([code, slot]) => {
         const attending = slot.user_attending;
         const names = slot.attendees;
         return `

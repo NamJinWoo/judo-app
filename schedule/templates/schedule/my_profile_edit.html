@@ -8,14 +8,58 @@
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label fw-medium">사용자 이름</label>
+                <input type="text" name="name" class="form-control {% if errors.name %}is-invalid{% endif %}"
+                       value="{{ current_name }}" maxlength="50" required>
+                {% if errors.name %}
+                <div class="invalid-feedback">{{ errors.name }}</div>
+                {% endif %}
+                <div class="form-text text-muted">로그인 시 사용하는 이름입니다.</div>
+            </div>
             <div class="mb-4">
                 <label class="form-label fw-medium">현재 띠/단</label>
-                <select name="belt" class="form-select">
+                <select name="belt" class="form-select {% if errors.belt %}is-invalid{% endif %}">
                     {% for value, label in belt_choices %}
                     <option value="{{ value }}" {% if profile.belt == value %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
+                {% if errors.belt %}
+                <div class="invalid-feedback">{{ errors.belt }}</div>
+                {% endif %}
             </div>
+
+            <hr class="my-4">
+            <p class="fw-medium mb-3">비밀번호 변경 <span class="text-muted fw-normal small">(변경하지 않으려면 비워두세요)</span></p>
+
+            <div class="mb-3">
+                <label class="form-label">현재 비밀번호</label>
+                <input type="password" name="current_password"
+                       class="form-control {% if errors.current_password %}is-invalid{% endif %}"
+                       autocomplete="current-password">
+                {% if errors.current_password %}
+                <div class="invalid-feedback">{{ errors.current_password }}</div>
+                {% endif %}
+            </div>
+            <div class="mb-3">
+                <label class="form-label">새 비밀번호</label>
+                <input type="password" name="new_password1"
+                       class="form-control {% if errors.new_password1 %}is-invalid{% endif %}"
+                       autocomplete="new-password">
+                {% if errors.new_password1 %}
+                <div class="invalid-feedback">{{ errors.new_password1 }}</div>
+                {% endif %}
+            </div>
+            <div class="mb-4">
+                <label class="form-label">새 비밀번호 확인</label>
+                <input type="password" name="new_password2"
+                       class="form-control {% if errors.new_password2 %}is-invalid{% endif %}"
+                       autocomplete="new-password">
+                {% if errors.new_password2 %}
+                <div class="invalid-feedback">{{ errors.new_password2 }}</div>
+                {% endif %}
+            </div>
+
             <button type="submit" class="btn btn-warning w-100 fw-semibold">저장</button>
         </form>
     </div>

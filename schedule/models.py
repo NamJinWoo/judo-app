@@ -6,7 +6,6 @@ class Member(models.Model):
     BELT_CHOICES = [
         ('white', '흰띠'),
         ('yellow', '노란띠'),
-        ('orange', '주황띠'),
         ('green', '초록띠'),
         ('blue', '파란띠'),
         ('brown', '갈색띠'),
@@ -119,11 +118,32 @@ class AttendancePlan(models.Model):
         ('18:00', '오후 6시'),
         ('19:30', '오후 7시 30분'),
         ('21:00', '오후 9시'),
+        ('11:00', '오전 11시'),
+        ('13:00', '오후 1시'),
+        ('15:00', '오후 3시'),
+        ('사유회', '사유회'),
     ]
+
+    # 요일(0=월 ~ 6=일)별 슬롯 순서
+    WEEKDAY_SLOTS = {
+        0: ['18:00', '19:30', '21:00'],
+        1: ['18:00', '19:30', '21:00'],
+        2: ['18:00', '19:30', '21:00'],
+        3: ['18:00', '19:30', '21:00'],
+        4: ['18:00', '19:30', '21:00'],
+        5: ['11:00', '13:00'],
+        6: ['사유회', '13:00', '15:00'],
+    }
+
+    @classmethod
+    def get_slots_for_date(cls, d):
+        codes = cls.WEEKDAY_SLOTS.get(d.weekday(), ['18:00', '19:30', '21:00'])
+        label_map = dict(cls.TIME_SLOT_CHOICES)
+        return [(code, label_map[code]) for code in codes]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='사용자', related_name='attendance_plans')
     date = models.DateField('날짜')
-    time_slot = models.CharField('시간대', max_length=5, choices=TIME_SLOT_CHOICES, default='18:00')
+    time_slot = models.CharField('시간대', max_length=10, choices=TIME_SLOT_CHOICES, default='18:00')
     confirmed = models.BooleanField('실제 출석 확인', default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 

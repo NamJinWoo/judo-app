@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
+from django.contrib import messages
 from django.http import HttpResponse
 from .forms import RegisterForm
 from .models import UserProfile
@@ -45,5 +46,6 @@ def register_view(request):
             user.save()
             UserProfile.objects.create(user=user, belt=belt)
             login(request, user)
+            messages.success(request, f'환영합니다, {name}님! 가입이 완료되었습니다.')
             return redirect('schedule:home')
     return render(request, 'accounts/register.html', {'form': form})

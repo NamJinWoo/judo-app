@@ -138,6 +138,14 @@
         </nav>
 
         <main class="col-md-10 ms-sm-auto px-4 py-4">
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-success alert-dismissible fade show mb-3" role="alert" id="flash-message">
+                <i class="bi bi-check-circle-fill me-2"></i>{{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
             {% block content %}{% endblock %}
         </main>
     </div>
@@ -172,6 +180,10 @@
 <script>
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js');
+}
+const flashMsg = document.getElementById('flash-message');
+if (flashMsg) {
+    setTimeout(() => bootstrap.Alert.getOrCreateInstance(flashMsg).close(), 4000);
 }
 </script>
 </body>
