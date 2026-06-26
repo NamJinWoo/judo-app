@@ -439,14 +439,14 @@ def attendance_toggle(request):
     date_str = request.POST.get('date', '')
     time_slot = request.POST.get('time_slot', '')
 
-    valid_slots = [s[0] for s in AttendancePlan.get_slots_for_date(target_date)]
-    if time_slot not in valid_slots:
-        return JsonResponse({'error': '유효하지 않은 시간대입니다.'}, status=400)
-
     try:
         target_date = date.fromisoformat(date_str)
     except ValueError:
         return JsonResponse({'error': 'invalid date'}, status=400)
+
+    valid_slots = [s[0] for s in AttendancePlan.get_slots_for_date(target_date)]
+    if time_slot not in valid_slots:
+        return JsonResponse({'error': '유효하지 않은 시간대입니다.'}, status=400)
 
     if target_date < date.today():
         return JsonResponse({'error': '지난 날짜는 변경할 수 없습니다.'}, status=400)
