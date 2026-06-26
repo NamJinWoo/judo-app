@@ -52,8 +52,8 @@ urlpatterns = [
     path('users/', views.user_list, name='user_list'),
     path('users/<int:user_id>/toggle-staff/', views.user_toggle_staff, name='user_toggle_staff'),
     path('users/<int:user_id>/toggle-active/', views.user_toggle_active, name='user_toggle_active'),
-    # 출석 확인 (관장용)
+    # 출석 확인 (관장용) — toggle은 반드시 <str> 패턴보다 먼저 정의
     path('attendance/confirm/', views.attendance_confirm, name='attendance_confirm'),
-    path('attendance/confirm/<str:target_date_str>/', views.attendance_confirm, name='attendance_confirm_date'),
     path('attendance/confirm/toggle/', views.attendance_confirm_toggle, name='attendance_confirm_toggle'),
+    path('attendance/confirm/<str:target_date_str>/', views.attendance_confirm, name='attendance_confirm_date'),
 ]
