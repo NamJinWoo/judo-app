@@ -10,6 +10,12 @@ Django 기반 유도관 출석·일정·회원 관리 PWA
 
 ## 배포 이력
 
+### v1.8 — 2026-06-28
+- Web Push 알림 추가: 같은 슬롯에 누군가 출석 등록/취소 시 푸시 알림 수신
+- 홈 화면 하단 버전 표시 + 업데이트 이력 모달
+- 테스트 86개로 확장 (Push 구독·해제·알림 생성 시나리오 추가)
+- VAPID 키 환경변수 분리 (WSGI 파일에서 관리)
+
 ### v1.7 — 2026-06-26
 - 전체 기능 테스트 77개 추가 (모델·인증·출석·프로필·공지·회원·회비·사용자·대시보드·출석확인)
 - 출석 토글 NameError 버그 수정 (target_date 파싱 순서 오류)
@@ -54,6 +60,12 @@ cd ~/judo-app && git pull && python manage.py migrate && touch /var/www/cheongli
 
 마이그레이션 변경이 없으면 `migrate` 생략 가능.
 
+### Web Push 환경변수 (WSGI 파일에 설정)
+```python
+os.environ['VAPID_PRIVATE_KEY'] = '...'
+os.environ['VAPID_PUBLIC_KEY']  = '...'
+```
+
 ---
 
 ## 테스트 실행
@@ -62,4 +74,4 @@ cd ~/judo-app && git pull && python manage.py migrate && touch /var/www/cheongli
 python manage.py test schedule accounts
 ```
 
-총 77개 테스트, 전 기능 커버.
+총 86개 테스트, 전 기능 커버.
