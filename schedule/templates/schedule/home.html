@@ -3,6 +3,16 @@
 
 {% block content %}
 
+<!-- 푸시 알림 허용 배너 (미허용 상태일 때만 JS로 표시) -->
+{% if VAPID_PUBLIC_KEY %}
+<div id="push-banner" class="d-none alert alert-dark d-flex align-items-center gap-2 py-2 px-3 mb-3" style="font-size:.83rem; border-radius:10px;">
+    <i class="bi bi-bell-fill text-warning"></i>
+    <span class="flex-grow-1">출석 변동 시 푸시 알림을 받으시겠어요?</span>
+    <button id="push-allow-btn" class="btn btn-warning btn-sm py-0 px-2">허용</button>
+    <button id="push-dismiss-btn" class="btn btn-link btn-sm p-0 text-secondary">나중에</button>
+</div>
+{% endif %}
+
 <!-- 내 정보 카드 -->
 <div class="card mb-4" style="background: linear-gradient(135deg, #1a1a2e, #2d2d4e); color: white;">
     <div class="card-body p-4">

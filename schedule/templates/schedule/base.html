@@ -178,12 +178,69 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 {% block scripts %}{% endblock %}
 <script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
-}
 const flashMsg = document.getElementById('flash-message');
 if (flashMsg) {
     setTimeout(() => bootstrap.Alert.getOrCreateInstance(flashMsg).close(), 4000);
+}
+
+// ── Web Push ────────────────────────────────────────────────────────────────
+const VAPID_PUBLIC_KEY = '{{ VAPID_PUBLIC_KEY }}';
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function subscribePush(reg) {
+    try {
+        const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        });
+        await fetch('{% url "schedule:push_subscribe" %}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+            body: JSON.stringify(sub.toJSON()),
+        });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+if ('serviceWorker' in navigator && 'PushManager' in window && VAPID_PUBLIC_KEY) {
+    navigator.serviceWorker.register('/sw.js').then(async reg => {
+        // 기존 구독 확인 후 서버에 동기화
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) {
+            fetch('{% url "schedule:push_subscribe" %}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+                body: JSON.stringify(existing.toJSON()),
+            });
+        }
+        // 알림 배너 표시 여부
+        const banner = document.getElementById('push-banner');
+        if (!banner) return;
+        const permission = Notification.permission;
+        if (permission === 'default') {
+            banner.classList.remove('d-none');
+        }
+        banner.querySelector('#push-allow-btn').addEventListener('click', async () => {
+            const result = await Notification.requestPermission();
+            if (result === 'granted') {
+                await subscribePush(reg);
+                banner.remove();
+            } else {
+                banner.remove();
+            }
+        });
+        banner.querySelector('#push-dismiss-btn').addEventListener('click', () => banner.remove());
+    });
+} else if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js');
 }
 </script>
 </body>

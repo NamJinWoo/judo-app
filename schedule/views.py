@@ -11,10 +11,59 @@ from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_POST
-from .models import Member, TrainingSession, Competition, AttendancePlan, Announcement, Notification, FeePayment, BeltPromotion
+from .models import Member, TrainingSession, Competition, AttendancePlan, Announcement, Notification, FeePayment, BeltPromotion, PushSubscription
 from .forms import TrainingForm, CompetitionForm, AnnouncementForm, MemberForm
 from accounts.models import UserProfile
 from accounts.models import UserProfile
+
+
+def _send_push(user, title, body, url='/attendance/'):
+    """사용자에게 Web Push 전송. 구독 없으면 무시, 만료된 구독은 삭제."""
+    from django.conf import settings
+    if not settings.VAPID_PRIVATE_KEY:
+        return
+    try:
+        sub = user.push_subscription
+    except Exception:
+        return
+    try:
+        from pywebpush import webpush, WebPushException
+        import json as _json
+        webpush(
+            subscription_info={
+                'endpoint': sub.endpoint,
+                'keys': {'p256dh': sub.p256dh, 'auth': sub.auth},
+            },
+            data=_json.dumps({'title': title, 'body': body, 'url': url}, ensure_ascii=False),
+            vapid_private_key=settings.VAPID_PRIVATE_KEY,
+            vapid_claims={'sub': f'mailto:{settings.VAPID_EMAIL}'},
+        )
+    except Exception:
+        sub.delete()
+
+
+@login_required
+def push_subscribe(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    data = json.loads(request.body)
+    PushSubscription.objects.update_or_create(
+        user=request.user,
+        defaults={
+            'endpoint': data['endpoint'],
+            'p256dh': data['keys']['p256dh'],
+            'auth': data['keys']['auth'],
+        },
+    )
+    return JsonResponse({'ok': True})
+
+
+@login_required
+def push_unsubscribe(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    PushSubscription.objects.filter(user=request.user).delete()
+    return JsonResponse({'ok': True})
 
 
 @login_required
@@ -454,20 +503,31 @@ def attendance_toggle(request):
     plan, created = AttendancePlan.objects.get_or_create(
         user=request.user, date=target_date, time_slot=time_slot
     )
+    my_name = request.user.first_name or request.user.username
+    slot_label = dict(AttendancePlan.TIME_SLOT_CHOICES).get(time_slot, time_slot)
+    date_str = target_date.strftime('%-m월 %-d일')
+
     if not created:
         plan.delete()
         attending = False
-        # 같은 날/시간대에 등록한 다른 사용자에게 취소 알림
         others = AttendancePlan.objects.filter(
             date=target_date, time_slot=time_slot
         ).exclude(user=request.user).select_related('user')
-        my_name = request.user.first_name or request.user.username
-        slot_label = dict(AttendancePlan.TIME_SLOT_CHOICES).get(time_slot, time_slot)
-        msg = f'{my_name}님이 {target_date.strftime("%-m월 %-d일")} {slot_label} 참석을 취소했습니다.'
+        msg = f'{my_name}님이 {date_str} {slot_label} 참석을 취소했습니다.'
         notifications = [Notification(user=p.user, message=msg, link='/attendance/') for p in others]
         Notification.objects.bulk_create(notifications)
+        for p in others:
+            _send_push(p.user, '출석 취소 알림', msg)
     else:
         attending = True
+        others = AttendancePlan.objects.filter(
+            date=target_date, time_slot=time_slot
+        ).exclude(user=request.user).select_related('user')
+        msg = f'{my_name}님이 {date_str} {slot_label} 출석 예정을 등록했습니다.'
+        notifications = [Notification(user=p.user, message=msg, link='/attendance/') for p in others]
+        Notification.objects.bulk_create(notifications)
+        for p in others:
+            _send_push(p.user, '새 출석 예정 알림', msg)
 
     slot_plans = AttendancePlan.objects.filter(date=target_date, time_slot=time_slot).select_related('user')
     names = [p.user.first_name or p.user.username for p in slot_plans]
@@ -831,11 +891,38 @@ def manifest(request):
     return JsonResponse(data, content_type='application/manifest+json')
 
 
-@cache_control(max_age=86400)
+@cache_control(max_age=0)
 def service_worker(request):
     sw = """
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(clients.claim()));
+
+self.addEventListener('push', function(event) {
+    if (!event.data) return;
+    const data = event.data.json();
+    event.waitUntil(
+        self.registration.showNotification(data.title || '청림유도관', {
+            body: data.body || '',
+            icon: '/icon-192.png',
+            badge: '/icon-192.png',
+            data: { url: data.url || '/attendance/' },
+            vibrate: [200, 100, 200],
+        })
+    );
+});
+
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    const url = event.notification.data?.url || '/attendance/';
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(list) {
+            for (const c of list) {
+                if (c.url.includes(url) && 'focus' in c) return c.focus();
+            }
+            return clients.openWindow(url);
+        })
+    );
+});
 """
     return HttpResponse(sw, content_type='application/javascript')
 

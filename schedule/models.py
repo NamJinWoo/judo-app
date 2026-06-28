@@ -220,3 +220,17 @@ class Notification(models.Model):
 
     def __str__(self):
         return f'{self.user.first_name} - {self.message[:30]}'
+
+
+class PushSubscription(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='push_subscription')
+    endpoint = models.TextField()
+    p256dh = models.TextField()
+    auth = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = '푸시 구독'
+
+    def __str__(self):
+        return f'{self.user.first_name} - push'
