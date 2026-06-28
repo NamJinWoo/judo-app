@@ -11,7 +11,7 @@ from django.urls import reverse
 from accounts.models import UserProfile
 from schedule.models import (
     Member, AttendancePlan, Announcement,
-    FeePayment, BeltPromotion, Notification,
+    FeePayment, BeltPromotion, Notification, PushSubscription,
 )
 
 
@@ -664,3 +664,122 @@ class AttendanceConfirmTest(TestCase):
         self.assertNotEqual(
             self.client.get(reverse('schedule:attendance_confirm')).status_code, 200
         )
+
+
+# ── 15. Web Push 구독 ──────────────────────────────────────────────────────────
+
+class PushSubscriptionTest(TestCase):
+
+    def setUp(self):
+        self.user = make_user('푸시유저')
+        self.client.login(username='푸시유저', password='pass1234')
+        self.sub_payload = {
+            'endpoint': 'https://fcm.googleapis.com/fcm/send/test-endpoint',
+            'keys': {
+                'p256dh': 'BNxEGbqNifQQbDi2tE7H5SAvEdkpFacXTkFKJfDmGcBa',
+                'auth': 'testauth1234',
+            },
+        }
+
+    def _subscribe(self):
+        import json
+        return self.client.post(
+            reverse('schedule:push_subscribe'),
+            data=json.dumps(self.sub_payload),
+            content_type='application/json',
+        )
+
+    def _unsubscribe(self):
+        return self.client.post(reverse('schedule:push_unsubscribe'))
+
+    def test_subscribe_creates_record(self):
+        resp = self._subscribe()
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['ok'])
+        sub = PushSubscription.objects.get(user=self.user)
+        self.assertEqual(sub.endpoint, self.sub_payload['endpoint'])
+        self.assertEqual(sub.p256dh, self.sub_payload['keys']['p256dh'])
+        self.assertEqual(sub.auth, self.sub_payload['keys']['auth'])
+
+    def test_subscribe_upserts_on_repeat(self):
+        self._subscribe()
+        import json
+        updated = dict(self.sub_payload, endpoint='https://fcm.googleapis.com/new-endpoint')
+        self.client.post(
+            reverse('schedule:push_subscribe'),
+            data=json.dumps(updated),
+            content_type='application/json',
+        )
+        self.assertEqual(PushSubscription.objects.filter(user=self.user).count(), 1)
+        self.assertEqual(PushSubscription.objects.get(user=self.user).endpoint, updated['endpoint'])
+
+    def test_unsubscribe_removes_record(self):
+        self._subscribe()
+        resp = self._unsubscribe()
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(PushSubscription.objects.filter(user=self.user).exists())
+
+    def test_unsubscribe_without_subscription_is_safe(self):
+        resp = self._unsubscribe()
+        self.assertEqual(resp.status_code, 200)
+
+    def test_subscribe_requires_login(self):
+        self.client.logout()
+        import json
+        resp = self.client.post(
+            reverse('schedule:push_subscribe'),
+            data=json.dumps(self.sub_payload),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 302)
+
+    def test_subscribe_get_not_allowed(self):
+        resp = self.client.get(reverse('schedule:push_subscribe'))
+        self.assertEqual(resp.status_code, 405)
+
+
+# ── 16. 출석 토글 → 알림 생성 ────────────────────────────────────────────────
+
+class AttendanceToggleNotificationTest(TestCase):
+
+    def setUp(self):
+        self.user_a = make_user('유저A')
+        self.user_b = make_user('유저B')
+        self.monday = next_weekday(0)
+
+    def _toggle(self, client, d, slot):
+        return client.post(reverse('schedule:attendance_toggle'), {
+            'date': d.isoformat(), 'time_slot': slot,
+        })
+
+    def test_new_registration_notifies_existing_attendees(self):
+        # 유저A 먼저 등록
+        AttendancePlan.objects.create(user=self.user_a, date=self.monday, time_slot='18:00')
+        # 유저B가 같은 슬롯 등록
+        client_b = self.client_class()
+        client_b.login(username='유저B', password='pass1234')
+        self._toggle(client_b, self.monday, '18:00')
+        # 유저A에게 알림 생성 확인
+        self.assertTrue(
+            Notification.objects.filter(user=self.user_a, message__contains='유저B').exists()
+        )
+
+    def test_cancellation_notifies_remaining_attendees(self):
+        # 둘 다 등록
+        AttendancePlan.objects.create(user=self.user_a, date=self.monday, time_slot='18:00')
+        AttendancePlan.objects.create(user=self.user_b, date=self.monday, time_slot='18:00')
+        # 유저B가 취소
+        client_b = self.client_class()
+        client_b.login(username='유저B', password='pass1234')
+        self._toggle(client_b, self.monday, '18:00')
+        # 유저A에게 취소 알림 생성 확인
+        self.assertTrue(
+            Notification.objects.filter(user=self.user_a, message__contains='취소').exists()
+        )
+
+    def test_no_notification_when_alone(self):
+        # 혼자 등록할 때는 알림 없어야 함
+        client_a = self.client_class()
+        client_a.login(username='유저A', password='pass1234')
+        self._toggle(client_a, self.monday, '18:00')
+        self.assertEqual(Notification.objects.count(), 0)
