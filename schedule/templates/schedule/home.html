@@ -108,12 +108,104 @@
 {% endif %}
 
 {% if coaches %}
-<div class="text-center mt-4 mb-2" style="color:#adb5bd; font-size:.78rem;">
+<div class="text-center mt-4" style="color:#adb5bd; font-size:.78rem;">
     관장&nbsp;
     {% for coach in coaches %}
     <span class="fw-medium" style="color:#6c757d;">{{ coach.first_name|default:coach.username }}</span>{% if not forloop.last %} &nbsp;·&nbsp; {% endif %}
     {% endfor %}
 </div>
 {% endif %}
+
+<div class="text-center mt-1 mb-3">
+    <button type="button" class="btn btn-link p-0 text-decoration-none"
+            style="color:#495057; font-size:.72rem;"
+            data-bs-toggle="modal" data-bs-target="#changelogModal">
+        v1.7
+    </button>
+</div>
+
+<!-- 업데이트 이력 모달 -->
+<div class="modal fade" id="changelogModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-3">
+                <h6 class="modal-title fw-bold mb-0">
+                    <i class="bi bi-clock-history me-1"></i> 업데이트 이력
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="font-size:.85rem;">
+
+                <div class="mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-warning text-dark">v1.7</span>
+                        <span class="text-muted small">2026-06-26</span>
+                    </div>
+                    <ul class="ps-3 mb-0" style="color:#495057;">
+                        <li>전체 기능 자동 테스트 77개 추가</li>
+                        <li>출석 토글 오류 수정 (날짜 파싱 순서 버그)</li>
+                        <li>출석 확인 URL 라우팅 버그 수정</li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-secondary">v1.6</span>
+                        <span class="text-muted small">2026-06-24</span>
+                    </div>
+                    <ul class="ps-3 mb-0" style="color:#495057;">
+                        <li>홈 프로필 원형에 띠 색상 표시, 유단자는 로마 숫자(Ⅰ~Ⅵ)</li>
+                        <li>홈 하단 관장 이름 표시 (단수 높은 순)</li>
+                        <li>출석 시간대 요일별 분리 — 토: 11시·1시, 일: 사유회·1시·3시</li>
+                        <li>내 정보 수정: 이름·띠·비밀번호 변경 기능</li>
+                        <li>회원가입 성공 메시지 및 이중 제출 방지</li>
+                        <li>주황띠 선택지 제거</li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-secondary">v1.5</span>
+                        <span class="text-muted small">2026-06-22</span>
+                    </div>
+                    <ul class="ps-3 mb-0" style="color:#495057;">
+                        <li>앱 아이콘을 청림유도관 로고로 교체</li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-secondary">v1.4</span>
+                        <span class="text-muted small">2026-06-21</span>
+                    </div>
+                    <ul class="ps-3 mb-0" style="color:#495057;">
+                        <li>회비 납부 관리 (월별 납부 현황·토글)</li>
+                        <li>띠 승급 이력 기록·삭제</li>
+                        <li>PWA — 홈 화면 설치, iOS standalone 지원</li>
+                        <li>사용자 관리 페이지 (관장 권한·활성화 토글)</li>
+                    </ul>
+                </div>
+
+                <div class="mb-1">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-secondary">v1.0</span>
+                        <span class="text-muted small">2026-06-21</span>
+                    </div>
+                    <ul class="ps-3 mb-0" style="color:#495057;">
+                        <li>최초 출시</li>
+                        <li>출석 예정 등록·취소 (주간/월간 보기)</li>
+                        <li>회원·훈련·대회 일정 관리</li>
+                        <li>공지사항·알림 시스템</li>
+                        <li>관장/관원 권한 분리</li>
+                    </ul>
+                </div>
+
+            </div>
+            <div class="modal-footer py-2">
+                <small class="text-muted">청림유도관 · cheonglimjudo.pythonanywhere.com</small>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
