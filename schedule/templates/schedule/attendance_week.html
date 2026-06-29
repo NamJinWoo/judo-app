@@ -47,9 +47,9 @@
     </div>
     <div class="card-body py-2 px-3">
         {% for slot in today_slots %}
-        <div class="d-flex align-items-center gap-2 mb-1" style="font-size:.85rem;">
-            <span class="text-muted fw-semibold" style="min-width:90px;">{{ slot.label }}</span>
-            <span class="text-muted small">{{ slot.count }}명</span>
+        <div style="font-size:.85rem; display:flex; flex-wrap:wrap; align-items:center; gap:3px 6px; margin-bottom:4px;">
+            <span class="text-muted fw-semibold flex-shrink-0" style="min-width:90px;">{{ slot.label }}</span>
+            <span class="text-muted small flex-shrink-0">{{ slot.count }}명</span>
             {% for name in slot.attendees %}
             <span class="badge bg-primary-subtle text-primary">{{ name }}</span>
             {% endfor %}
@@ -144,16 +144,16 @@
                     <span class="badge bg-success-subtle text-success me-1 mb-1" style="font-size:.65rem;">{{ t.start_time|time:"H:i" }} {{ t.title }}</span>
                     {% endfor %}
                     {% for slot in day.slots %}
-                    <div class="d-flex align-items-center gap-1 mb-1 slot-summary-{{ day.date|date:'Ymd' }}-{{ slot.code|cut:':' }}" style="font-size:.75rem;">
-                        <span class="text-muted fw-semibold" style="min-width:60px;">{{ slot.label|slice:":5" }}</span>
-                        {% if slot.user_attending %}<i class="bi bi-check-circle-fill text-success"></i>{% endif %}
+                    <div class="slot-summary-{{ day.date|date:'Ymd' }}-{{ slot.code|cut:':' }}" style="font-size:.75rem; display:flex; flex-wrap:wrap; align-items:center; gap:2px 4px; margin-bottom:4px;">
+                        <span class="text-muted fw-semibold flex-shrink-0" style="min-width:60px;">{{ slot.label|slice:":5" }}</span>
+                        {% if slot.user_attending %}<i class="bi bi-check-circle-fill text-success flex-shrink-0"></i>{% endif %}
                         {% for name in slot.attendees %}
                         <span class="badge bg-primary-subtle text-primary" style="font-size:.65rem;">{{ name }}</span>
                         {% empty %}<span class="text-muted small">-</span>{% endfor %}
                     </div>
                     {% endfor %}
                 </div>
-                <div class="ms-auto">
+                <div class="flex-shrink-0 ms-2">
                     {% if day.is_past %}
                     <i class="bi bi-lock text-muted"></i>
                     {% elif day.user_attending %}
@@ -249,16 +249,16 @@
                     <span class="badge bg-success-subtle text-success me-1 mb-1" style="font-size:.65rem;">{{ t.start_time|time:"H:i" }} {{ t.title }}</span>
                     {% endfor %}
                     {% for slot in day.slots %}
-                    <div class="d-flex align-items-center gap-1 mb-1 slot-summary-{{ day.date|date:'Ymd' }}-{{ slot.code|cut:':' }}" style="font-size:.75rem;">
-                        <span class="text-muted fw-semibold" style="min-width:60px;">{{ slot.label|slice:":5" }}</span>
-                        {% if slot.user_attending %}<i class="bi bi-check-circle-fill text-success"></i>{% endif %}
+                    <div class="slot-summary-{{ day.date|date:'Ymd' }}-{{ slot.code|cut:':' }}" style="font-size:.75rem; display:flex; flex-wrap:wrap; align-items:center; gap:2px 4px; margin-bottom:4px;">
+                        <span class="text-muted fw-semibold flex-shrink-0" style="min-width:60px;">{{ slot.label|slice:":5" }}</span>
+                        {% if slot.user_attending %}<i class="bi bi-check-circle-fill text-success flex-shrink-0"></i>{% endif %}
                         {% for name in slot.attendees %}
                         <span class="badge bg-primary-subtle text-primary" style="font-size:.65rem;">{{ name }}</span>
                         {% empty %}<span class="text-muted small">-</span>{% endfor %}
                     </div>
                     {% endfor %}
                 </div>
-                <div class="ms-auto">
+                <div class="flex-shrink-0 ms-2">
                     {% if day.is_past %}
                     <i class="bi bi-lock text-muted"></i>
                     {% elif day.user_attending %}
@@ -381,12 +381,11 @@ function updateCardSummary(dateStr, slots) {
         const key = code.replace(':','');
         const els = document.querySelectorAll(`.slot-summary-${dateParts}-${key}`);
         els.forEach(el => {
-            const icon = slot.user_attending ? '<i class="bi bi-check-circle-fill text-success ms-1"></i>' : '';
+            const icon = slot.user_attending ? '<i class="bi bi-check-circle-fill text-success flex-shrink-0"></i>' : '';
             const badges = slot.attendees.length
                 ? slot.attendees.map(n => `<span class="badge bg-primary-subtle text-primary" style="font-size:.65rem;">${n}</span>`).join('')
-                : '<span class="text-muted">-</span>';
-            const label = el.querySelector ? el : el;
-            el.innerHTML = `<span class="text-muted fw-bold">${slot.label.slice(0,5)}</span>${icon}<div class="ms-1">${badges}</div>`;
+                : '<span class="text-muted small">-</span>';
+            el.innerHTML = `<span class="text-muted fw-bold flex-shrink-0" style="min-width:60px;">${slot.label.slice(0,5)}</span>${icon}${badges}`;
         });
         if (slot.user_attending) userAttendingAny = true;
     });
